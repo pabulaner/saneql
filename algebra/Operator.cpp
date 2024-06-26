@@ -21,20 +21,15 @@ TableScan::TableScan(string name, vector<Column> columns)
 void TableScan::generate(SQLWriter& out)
 // Generate SQL
 {
-   out.write("(select ");
-   bool first = true;
-   for (auto& c : columns) {
-      if (first)
-         first = false;
-      else
-         out.write(", ");
-      out.writeIdentifier(c.name);
-      out.write(" as ");
-      out.writeIU(c.iu.get());
-   }
-   out.write(" from ");
+   out.write("auto scan = make_unique<Scan>(\"");
    out.writeIdentifier(name);
-   out.write(")");
+   out.write("\");\n");
+
+   for (auto& c : columns) {
+      out.write("IU* iu = scan->getIU(\"");
+      out.writeIdentifier(c.name);
+      out.write("\");\n");
+   }
 }
 //---------------------------------------------------------------------------
 Select::Select(unique_ptr<Operator> input, unique_ptr<Expression> condition)
