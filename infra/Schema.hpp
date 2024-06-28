@@ -91,6 +91,8 @@ class Schema {
       std::string name;
       /// The type
       Type type;
+      /// Is key
+      bool isKey;
    };
    /// A table definition
    struct Table {

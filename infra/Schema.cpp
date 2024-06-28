@@ -33,6 +33,8 @@ void Schema::createTable(std::string name, std::initializer_list<Column> columns
 void Schema::createTPCH()
 // Create the TPC-H schema for experiments
 {
+   createTable("warehouse_t", {{"w_id", Type::getInteger(), true}, {"w_name", Type::getVarchar(10)}, {"w_street_1", Type::getVarchar(20)}});
+   
    createTable("part", {{"p_partkey", Type::getInteger()}, {"p_name", Type::getVarchar(55)}, {"p_mfgr", Type::getChar(25)}, {"p_brand", Type::getChar(10)}, {"p_type", Type::getVarchar(25)}, {"p_size", Type::getInteger()}, {"p_container", Type::getChar(10)}, {"p_retailprice", Type::getDecimal(12, 2)}, {"p_comment", Type::getVarchar(23)}});
    createTable("region", {{"r_regionkey", Type::getInteger()}, {"r_name", Type::getChar(25)}, {"r_comment", Type::getVarchar(152)}});
    createTable("nation", {{"n_nationkey", Type::getInteger()}, {"n_name", Type::getChar(25)}, {"n_regionkey", Type::getInteger()}, {"n_comment", Type::getVarchar(152)}});
