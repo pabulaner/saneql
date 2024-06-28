@@ -47,7 +47,7 @@ void SQLWriter::writeIU(const algebra::IU* iu)
    if (auto iter = iuNames.find(iu); iter != iuNames.end()) {
       writer += iter->second;
    } else {
-      string name = "v_"s + to_string(iuNames.size() + 1);
+      string name = to_string(iuNames.size() + 1);
       writer += name;
       iuNames[iu] = move(name);
    }
@@ -74,11 +74,11 @@ void SQLWriter::writeType(Type type)
    auto& writer = *target;
    switch (type.getType()) {
       case Type::Unknown: writer += "unknown"; break; // this can only happen for NULL values
-      case Type::Bool: writer += "boolean"; break;
-      case Type::Integer: writer += "integer"; break;
-      case Type::Decimal: writer += "decimal(" + to_string(type.getPrecision()) + "," + to_string(type.getScale()) + ")"; break;
-      case Type::Char: writer += "char(" + to_string(type.getLength()) + ")"; break;
-      case Type::Varchar: writer += "varchar(" + to_string(type.getLength()) + ")"; break;
+      case Type::Bool: writer += "bool"; break;
+      case Type::Integer: writer += "int"; break;
+      case Type::Decimal: writer += "double"; break;
+      case Type::Char: writer += "char"; break;
+      case Type::Varchar: writer += "varchar<" + to_string(type.getLength()) + ">"; break;
       case Type::Text: writer += "text"; break;
       case Type::Date: writer += "date"; break;
       case Type::Interval: writer += "interval"; break;

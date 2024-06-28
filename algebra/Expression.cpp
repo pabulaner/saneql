@@ -32,7 +32,9 @@ IURef::IURef(const IU* iu)
 void IURef::generate(SQLWriter& out)
 // Generate SQL
 {
+   out.write("get<");
    out.writeIU(iu);
+   out.write(">(row)");
 }
 //---------------------------------------------------------------------------
 void ConstExpression::generate(SQLWriter& out)
@@ -43,11 +45,7 @@ void ConstExpression::generate(SQLWriter& out)
    } else {
       auto type = getType();
       if ((type.getType() != Type::Char) && (type.getType() != Type::Varchar) && (type.getType() != Type::Text)) {
-         out.write("cast(");
-         out.writeString(value);
-         out.write(" as ");
-         out.writeType(type);
-         out.write(")");
+         out.write(value);
       } else {
          out.writeString(value);
       }
@@ -75,8 +73,8 @@ void ComparisonExpression::generate(SQLWriter& out)
 {
    left->generateOperand(out);
    switch (mode) {
-      case Mode::Equal: out.write(" = "); break;
-      case Mode::NotEqual: out.write(" <> "); break;
+      case Mode::Equal: out.write(" == "); break;
+      case Mode::NotEqual: out.write(" != "); break;
       case Mode::Is: out.write(" is not distinct from "); break;
       case Mode::IsNot: out.write(" is distinct from "); break;
       case Mode::Less: out.write(" < "); break;

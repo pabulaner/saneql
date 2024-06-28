@@ -21,15 +21,33 @@ TableScan::TableScan(string name, vector<Column> columns)
 void TableScan::generate(SQLWriter& out)
 // Generate SQL
 {
-   out.write("auto scan = make_unique<Scan>(\"");
-   out.writeIdentifier(name);
-   out.write("\");\n");
+   out.write("db." + name + ".stream([&]() {\n");
+   out.write("return Row<" + to_string(columns.size()) + ", RowIndexMap<" + to_string(columns.size()) + ">{");
 
+   bool first = true;
    for (auto& c : columns) {
-      out.write("IU* iu = scan->getIU(\"");
-      out.writeIdentifier(c.name);
-      out.write("\");\n");
+      if (first)
+         first = false;
+      else
+         out.write(", ");
+      
+      out.writeIU(c.iu.get());
    }
+
+   out.write("}, " + name + ">(make_tuple(");
+
+   first = true;
+   for (auto& c : columns) {
+      if (first) 
+         first = false;
+      else 
+         out.write(", ");
+
+      out.write("&" + name + "::" + c.name);
+   }
+
+   out.write("));\n");
+   out.write("})\n");
 }
 //---------------------------------------------------------------------------
 Select::Select(unique_ptr<Operator> input, unique_ptr<Expression> condition)
@@ -41,11 +59,13 @@ Select::Select(unique_ptr<Operator> input, unique_ptr<Expression> condition)
 void Select::generate(SQLWriter& out)
 // Generate SQL
 {
-   out.write("(select * from ");
    input->generate(out);
-   out.write(" s where ");
+
+   out.write(".select([&](const auto& row) {\n");
+   out.write("return ");
    condition->generate(out);
-   out.write(")");
+   out.write(";\n");
+   out.write("})");
 }
 //---------------------------------------------------------------------------
 Map::Map(unique_ptr<Operator> input, vector<Entry> computations)
