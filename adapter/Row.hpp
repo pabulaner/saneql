@@ -22,25 +22,40 @@ struct RowIndexMap {
     }
 };
 
-template <std::size_t TSize, RowIndexMap<TSize> TMap, typename TValue, typename... TArgs>
+template <std::size_t TSize, RowIndexMap<TSize> TMap, typename TKey, typename TValue, typename TKeyTuple, typename TValueTuple>
 class Row {
 private:
+    inline Row() {};
+};
+
+template <std::size_t TSize, RowIndexMap<TSize> TMap, typename TKey, typename TValue, typename... TKeyArgs, typename... TValueArgs>
+class Row<TSize, TMap, TKey, TValue, std::tuple<TKeyArgs...>, std::tuple<TValueArgs...>> {
+private:
+    TKey* key;
     TValue* value;
 
-    std::tuple<TArgs...> fields;
+    const std::tuple<TKeyArgs...> keyFields;
+    const std::tuple<TValueArgs...> valueFields;
 
 public:
-    inline Row(TArgs... args) 
-        : fields(std::make_tuple(args...))
+    inline Row(const std::tuple<TKeyArgs...>& keyFields, const std::tuple<TValueArgs...>& valueFields) 
+        : keyFields(keyFields)
+        , valueFields(valueFields)
     {}
 
-    inline void setValue(TValue* value) {
+    inline void set(TKey* key, TValue* value) {
+        this->key = key;
         this->value = value;
     }
 
     template <std::size_t TIndex>
-    inline constexpr auto& get() const {
-        return value->*(std::get<TMap.get(TIndex)>(fields));
+    inline constexpr auto& getKey() const {
+        return key->*(std::get<TMap.get(TIndex)>(keyFields));
+    }
+
+    template <std::size_t TIndex>
+    inline constexpr auto& getValue() const {
+        return value->*(std::get<TMap.get(TIndex)>(valueFields));
     }
 };
 
