@@ -46,6 +46,8 @@ class TableScan : public Operator {
    struct Column {
       /// The name
       std::string name;
+      /// Is key
+      bool isKey;
       /// The IU
       std::unique_ptr<IU> iu;
    };

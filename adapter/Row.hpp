@@ -23,13 +23,15 @@ struct RowIndexMap {
 };
 
 template <std::size_t TSize, RowIndexMap<TSize> TMap, typename TValue, typename... TArgs>
-struct Row {
+class Row {
+private:
     TValue* value;
+
     std::tuple<TArgs...> fields;
 
 public:
-    inline Row(std::tuple<TArgs...> fields) 
-        : fields(fields)
+    inline Row(TArgs... args) 
+        : fields(std::make_tuple(args...))
     {}
 
     inline void setValue(TValue* value) {

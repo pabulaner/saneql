@@ -4,6 +4,8 @@
 
 #include "StreamSource.hpp"
 
+namespace adapter {
+
 template <typename T>
 class Stream {
 private:
@@ -12,7 +14,10 @@ private:
 public:
     Stream(IStreamSource<T>& source);
 
-    Stream<T> filter(std::function<bool(const T&)> predicate);
+    Stream<T> select(std::function<bool(const T&)> predicate);
+
+    template <typename TOut>
+    Stream<TOut> map(std::function<TOut(const T&)> mapper);
 
     void forEach(std::function<void(const T&)> consumer);
 };
@@ -25,13 +30,23 @@ Stream<T>::Stream(IStreamSource<T>& source)
 {}
 
 template <typename T>
-Stream<T> Stream<T>::filter(std::function<bool(const T&)> predicate) {
-    return Stream<T>(FilterStreamSource<T>(source, predicate));
+Stream<T> Stream<T>::select(std::function<bool(const T&)> predicate) {
+    return Stream<T>(SelectStreamSource<T>(source, predicate));
+}
+
+template <typename T>
+template <typename TOut>
+Stream<TOut> Stream<T>::map(std::function<TOut(const T&)> mapper) {
+    return Stream<T>(MapStreamSource<TOut>(source, mapper));
 }
 
 template <typename T>
 void Stream<T>::forEach(std::function<void(const T&)> consumer) {
-    while (source.hasNext()) {
-        consumer(source.next());
+    T* value;
+
+    while (value = source.next()) {
+        consumer(*value);
     }
 }
+
+} // namespace adapter

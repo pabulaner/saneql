@@ -43,7 +43,7 @@ void TableScan::generate(SQLWriter& out)
       else 
          out.write(", ");
 
-      out.write("&" + name + "::" + c.name);
+      out.write("&" + name + "::" + (c.isKey ? "Key::" : "") + c.name);
    }
 
    out.write("));\n");

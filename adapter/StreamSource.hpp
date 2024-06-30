@@ -2,29 +2,47 @@
 
 #include <functional>
 
-template <typename T>
+#include "Row.hpp"
+#include "vmcache.hpp"
+
+namespace adapter {
+
+template <typename TIn, typename TOut>
 class IStreamSource {
+protected:
+    TIn source;
+
 public:
     // returned pointers are only guaranteed to be valid until
     // the next call to next()
     virtual const T* next() = 0;
 };
 
-template <typename T>
-class DatabaseStreamSource : public IStreamSource<T> {
+template <typename TSize, typename TMap, typename TIn, typename... TArgs>
+class DatabaseStreamSource : public IStreamSource<vmcacheAdapter<TIn>*, TRow> {
 private:
+    typedef Row<TSize, TMap, TIn, TArgs...> TRow;
 
+    TRow row;
+
+public:
+    DatabaseStreamSource(vmcacheAdapter<TIn>* source, TArgs... args) 
+        : source(source)
+        , row(TRow(args...))
+    {}
+
+    virtual const TRow* next() override {
+        return nullptr;
+    }
 };
 
 template <typename T>
-class FilterStreamSource : public IStreamSource<T> {
+class SelectStreamSource : public IStreamSource<IStreamSource<T>, T> {
 private:
-    IStreamSource<T> source;
-
     std::function<bool(const T&)> predicate;
 
 public:
-    FilterStreamSource(IStreamSource<T> source, std::function<bool(const T&)> predicate) 
+    SelectStreamSource(IStreamSource<T> source, std::function<bool(const T&)> predicate) 
         : source(source)
         , predicate(predicate)
     {}
@@ -43,10 +61,8 @@ public:
 };
 
 template <typename TIn, typename TOut>
-class MapStreamSource : IStreamSource<TOut> {
+class MapStreamSource : IStreamSource<IStreamSource<TIn>, TOut> {
 private:
-    IStreamSource<TIn> source;
-
     std::function<TOut(const TIn&)> mapper;
 
     TOut out;
@@ -71,3 +87,5 @@ public:
 };
 
 // implementation
+
+} // namespace adapter

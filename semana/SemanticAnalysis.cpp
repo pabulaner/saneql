@@ -1598,7 +1598,7 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeToken(const BindingI
    auto resultScope = binding.addScope(bindingName);
    vector<algebra::TableScan::Column> columns;
    for (auto& c : table->columns) {
-      columns.push_back({c.name, make_unique<algebra::IU>(c.type)});
+      columns.push_back({c.name, c.isKey, make_unique<algebra::IU>(c.type)});
       binding.addBinding(resultScope, getInternalName(c.name), columns.back().iu.get());
    }
    return ExpressionResult(make_unique<algebra::TableScan>(name, move(columns)), move(binding));

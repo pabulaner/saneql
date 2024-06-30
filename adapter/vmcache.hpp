@@ -1,3 +1,5 @@
+#pragma once
+
 #include <atomic>
 #include <algorithm>
 #include <cassert>
@@ -1592,6 +1594,12 @@ struct vmcacheAdapter
    BTree tree;
 
    public:
+   template <typename TSize, RowIndexMap<TSize> TMap, typename... TArgs>
+   Stream<Row<TSize, TMap, Record, TArgs...>> stream(TArgs... args) {
+      return Stream<Row<TSize, TMap, Record, TArgs...>>(
+         DatabaseStreamSource(this, args...));
+   }
+
    void forEach(const std::function<const Record&>& consumer) {
       u8 kk[Record::maxFoldLength()];
       tree.scanAsc({(u8*)nullptr, 0}, [&](BTreeNode& node, unsigned slot) {
