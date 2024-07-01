@@ -9,10 +9,10 @@ namespace adapter {
 template <typename T>
 class Stream {
 private:
-    IStreamSource<T> source;
+    IStreamSourceBase<T>* source;
 
 public:
-    Stream(IStreamSource<T>& source);
+    Stream(IStreamSourceBase<T>* source);
 
     Stream<T> select(std::function<bool(const T&)> predicate);
 
@@ -25,7 +25,7 @@ public:
 // implementation
 
 template <typename T>
-Stream<T>::Stream(IStreamSource<T>& source)
+Stream<T>::Stream(IStreamSourceBase<T>* source)
     : source(source)
 {}
 
@@ -44,7 +44,7 @@ template <typename T>
 void Stream<T>::forEach(std::function<void(const T&)> consumer) {
     T* value;
 
-    while (value = source.next()) {
+    while (value = source->next()) {
         consumer(*value);
     }
 }

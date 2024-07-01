@@ -3,39 +3,57 @@
 #include <functional>
 
 #include "Row.hpp"
-#include "vmcache.hpp"
 
 namespace adapter {
 
-template <typename TIn, typename TOut>
-class IStreamSource {
-protected:
-    TIn source;
-
+template <typename T>
+class IStreamSourceBase {
 public:
     // returned pointers are only guaranteed to be valid until
     // the next call to next()
     virtual const T* next() = 0;
 };
 
-template <typename TSize, typename TMap, typename TIn, typename... TArgs>
-class DatabaseStreamSource : public IStreamSource<vmcacheAdapter<TIn>*, TRow> {
+template <typename TIn, typename TOut>
+class IStreamSource : IStreamSourceBase<TOut> {
+protected:
+    TIn source;
+
+    IStreamSource(TIn& source) 
+        : source(source)
+    {}
+};
+
+template <std::size_t TSize, RowIndexMap<TSize> TMap, typename TIn, typename TIterator, typename... TArgs>
+class IteratorStreamSource : public IStreamSource<TIn, Row<TSize, TMap, TIn, TArgs...>> {
 private:
     typedef Row<TSize, TMap, TIn, TArgs...> TRow;
+
+    TIterator iterator;
 
     TRow row;
 
 public:
-    DatabaseStreamSource(vmcacheAdapter<TIn>* source, TArgs... args) 
-        : source(source)
+    IteratorStreamSource(TIn source, TArgs... args) 
+        : IStreamSource<TIn, Row<TSize, TMap, TIn, TArgs...>>(source)
         , row(TRow(args...))
+        , iterator(source.begin())
     {}
 
     virtual const TRow* next() override {
+        if (iterator != this->source.end()) {
+            row->setKey(iterator->first);
+            row->setValue(iterator->second);
+
+            iterator++;
+            return &row;
+        }
+
         return nullptr;
     }
 };
 
+/*
 template <typename T>
 class SelectStreamSource : public IStreamSource<IStreamSource<T>, T> {
 private:
@@ -85,6 +103,8 @@ public:
         return nullptr;
     }
 };
+
+*/
 
 // implementation
 
