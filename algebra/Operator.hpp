@@ -29,6 +29,21 @@ class IU {
    const Type& getType() const { return type; }
 };
 //---------------------------------------------------------------------------
+/// An information unit
+class OperatorIU {
+   /// The id
+   static int id;
+   /// The name
+   std::string name;
+
+   public:
+   /// Constructor
+   OperatorIU() : name("o_" + to_string(++id)) {}
+
+   /// Get the name
+   const std::string& getName() const { return name; }
+};
+//---------------------------------------------------------------------------
 /// Base class for operators
 class Operator {
    public:
@@ -36,7 +51,7 @@ class Operator {
    virtual ~Operator();
 
    // Generate SQL
-   virtual void generate(SQLWriter& out) = 0;
+   virtual OperatorIU generate(SQLWriter& out) = 0;
 };
 //---------------------------------------------------------------------------
 /// A table scan operator
@@ -61,7 +76,7 @@ class TableScan : public Operator {
    TableScan(std::string name, std::vector<Column> columns);
 
    // Generate SQL
-   void generate(SQLWriter& out) override;
+   OperatorIU generate(SQLWriter& out) override;
 };
 //---------------------------------------------------------------------------
 /// A select operator
@@ -76,7 +91,7 @@ class Select : public Operator {
    Select(std::unique_ptr<Operator> input, std::unique_ptr<Expression> condition);
 
    // Generate SQL
-   void generate(SQLWriter& out) override;
+   OperatorIU generate(SQLWriter& out) override;
 };
 //---------------------------------------------------------------------------
 /// A map operator
@@ -95,7 +110,7 @@ class Map : public Operator {
    Map(std::unique_ptr<Operator> input, std::vector<Entry> computations);
 
    // Generate SQL
-   void generate(SQLWriter& out) override;
+   OperatorIU generate(SQLWriter& out) override;
 };
 //---------------------------------------------------------------------------
 /// A set operation operator
@@ -126,7 +141,7 @@ class SetOperation : public Operator {
    SetOperation(std::unique_ptr<Operator> left, std::unique_ptr<Operator> right, std::vector<std::unique_ptr<Expression>> leftColumns, std::vector<std::unique_ptr<Expression>> rightColumns, std::vector<std::unique_ptr<IU>> resultColumns, Op op);
 
    // Generate SQL
-   void generate(SQLWriter& out) override;
+   OperatorIU generate(SQLWriter& out) override;
 };
 //---------------------------------------------------------------------------
 /// A join operator
@@ -157,7 +172,7 @@ class Join : public Operator {
    Join(std::unique_ptr<Operator> left, std::unique_ptr<Operator> right, std::unique_ptr<Expression> condition, JoinType joinType);
 
    // Generate SQL
-   void generate(SQLWriter& out) override;
+   OperatorIU generate(SQLWriter& out) override;
 };
 //---------------------------------------------------------------------------
 /// A group by operator
@@ -175,7 +190,7 @@ class GroupBy : public Operator, public AggregationLike {
    GroupBy(std::unique_ptr<Operator> input, std::vector<Entry> groupBy, std::vector<Aggregation> aggregates);
 
    // Generate SQL
-   void generate(SQLWriter& out) override;
+   OperatorIU generate(SQLWriter& out) override;
 };
 //---------------------------------------------------------------------------
 /// A sort operator
@@ -202,7 +217,7 @@ class Sort : public Operator {
    Sort(std::unique_ptr<Operator> input, std::vector<Entry> order, std::optional<uint64_t> limit, std::optional<uint64_t> offset);
 
    // Generate SQL
-   void generate(SQLWriter& out) override;
+   OperatorIU generate(SQLWriter& out) override;
 };
 //---------------------------------------------------------------------------
 /// A window operator
@@ -225,7 +240,7 @@ class Window : public Operator, public AggregationLike {
    Window(std::unique_ptr<Operator> input, std::vector<Aggregation> aggregates, std::vector<std::unique_ptr<Expression>> partitionBy, std::vector<Sort::Entry> orderBy);
 
    // Generate SQL
-   void generate(SQLWriter& out) override;
+   OperatorIU generate(SQLWriter& out) override;
 };
 //---------------------------------------------------------------------------
 /// An inline table definition
@@ -243,7 +258,7 @@ class InlineTable : public Operator {
    InlineTable(std::vector<std::unique_ptr<algebra::IU>> columns, std::vector<std::unique_ptr<algebra::Expression>> values, unsigned rowCount);
 
    // Generate SQL
-   void generate(SQLWriter& out) override;
+   OperatorIU generate(SQLWriter& out) override;
 };
 //---------------------------------------------------------------------------
 }

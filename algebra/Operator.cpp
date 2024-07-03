@@ -7,6 +7,8 @@ using namespace std;
 //---------------------------------------------------------------------------
 namespace saneql::algebra {
 //---------------------------------------------------------------------------
+int OperatorIU::id = 0;
+//---------------------------------------------------------------------------
 Operator::~Operator()
 // Destructor
 {
@@ -18,23 +20,20 @@ TableScan::TableScan(string name, vector<Column> columns)
 {
 }
 //---------------------------------------------------------------------------
-void TableScan::generate(SQLWriter& out)
+OperatorIU TableScan::generate(SQLWriter& out)
 // Generate SQL
 {
-   out.write("(select ");
-   bool first = true;
+   OperatorIU opIU;
+
+   out.write("auto " + opIU.getName() + " = make_unique<Scan>(\"" + name + "\");\n");
+
    for (auto& c : columns) {
-      if (first)
-         first = false;
-      else
-         out.write(", ");
-      out.writeIdentifier(c.name);
-      out.write(" as ");
+      out.write("auto ");
       out.writeIU(c.iu.get());
+      out.write(" = " + opIU.getName() + "->getIU(\"" + c.name + "\");\n");
    }
-   out.write(" from ");
-   out.writeIdentifier(name);
-   out.write(")");
+
+   return opIU;
 }
 //---------------------------------------------------------------------------
 Select::Select(unique_ptr<Operator> input, unique_ptr<Expression> condition)
@@ -43,14 +42,15 @@ Select::Select(unique_ptr<Operator> input, unique_ptr<Expression> condition)
 {
 }
 //---------------------------------------------------------------------------
-void Select::generate(SQLWriter& out)
+OperatorIU Select::generate(SQLWriter& out)
 // Generate SQL
 {
-   out.write("(select * from ");
-   input->generate(out);
-   out.write(" s where ");
-   condition->generate(out);
-   out.write(")");
+   OperatorIU opIU;
+   OperatorIU inputIU = input->generate(out);
+
+   out.write("auto " + opIU.getName() + " = make_unique<Selection>(std::move(\"" + inputIU.getName() + "\"),\n");
+
+   return opIU;
 }
 //---------------------------------------------------------------------------
 Map::Map(unique_ptr<Operator> input, vector<Entry> computations)
@@ -59,7 +59,7 @@ Map::Map(unique_ptr<Operator> input, vector<Entry> computations)
 {
 }
 //---------------------------------------------------------------------------
-void Map::generate(SQLWriter& out)
+OperatorIU Map::generate(SQLWriter& out)
 // Generate SQL
 {
    out.write("(select *");
@@ -80,7 +80,7 @@ SetOperation::SetOperation(unique_ptr<Operator> left, unique_ptr<Operator> right
 {
 }
 //---------------------------------------------------------------------------
-void SetOperation::generate(SQLWriter& out)
+OperatorIU SetOperation::generate(SQLWriter& out)
 // Generate SQL
 {
    auto dumpColumns = [&out](const vector<unique_ptr<Expression>>& columns) {
@@ -136,7 +136,7 @@ Join::Join(unique_ptr<Operator> left, unique_ptr<Operator> right, unique_ptr<Exp
 {
 }
 //---------------------------------------------------------------------------
-void Join::generate(SQLWriter& out)
+OperatorIU Join::generate(SQLWriter& out)
 // Generate SQL
 {
    switch (joinType) {
@@ -221,7 +221,7 @@ GroupBy::GroupBy(unique_ptr<Operator> input, vector<Entry> groupBy, vector<Aggre
 {
 }
 //---------------------------------------------------------------------------
-void GroupBy::generate(SQLWriter& out)
+OperatorIU GroupBy::generate(SQLWriter& out)
 // Generate SQL
 {
    out.write("(select ");
@@ -278,7 +278,7 @@ Sort::Sort(unique_ptr<Operator> input, vector<Entry> order, optional<uint64_t> l
 {
 }
 //---------------------------------------------------------------------------
-void Sort::generate(SQLWriter& out)
+OperatorIU Sort::generate(SQLWriter& out)
 // Generate SQL
 {
    out.write("(select * from ");
@@ -314,7 +314,7 @@ Window::Window(unique_ptr<Operator> input, vector<Aggregation> aggregates, vecto
 {
 }
 //---------------------------------------------------------------------------
-void Window::generate(SQLWriter& out)
+OperatorIU Window::generate(SQLWriter& out)
 // Generate SQL
 {
    auto aggr = [&out](const char* name, const Aggregation& a, bool distinct = false) {
@@ -390,7 +390,7 @@ InlineTable::InlineTable(vector<unique_ptr<algebra::IU>> columns, vector<unique_
 {
 }
 //---------------------------------------------------------------------------
-void InlineTable::generate(SQLWriter& out)
+OperatorIU InlineTable::generate(SQLWriter& out)
 // Generate SQL
 {
    out.write("(select * from (values");
