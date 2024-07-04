@@ -47,8 +47,38 @@ OperatorIU Select::generate(SQLWriter& out)
 {
    OperatorIU opIU;
    OperatorIU inputIU = input->generate(out);
+   std::vector<const IU*> conditionIUs = condition->getIUs();
 
-   out.write("auto " + opIU.getName() + " = make_unique<Selection>(std::move(\"" + inputIU.getName() + "\"),\n");
+   out.write("auto " + opIU.getName() + " = make_unique<Selection>(std::move(" + inputIU.getName() + "),\n");
+   out.write("makeCallExp(\"([](");
+
+   bool first = true;
+   for (auto iu : conditionIUs) {
+      if (first) 
+         first = false;
+      else
+         out.write(", ");
+
+      out.write("auto& ");
+      out.writeIU(iu);
+   }
+
+   out.write("))) { return ");
+   condition->generate(out);
+   out.write(" })\",\n");
+   out.write("make_unique<IUExp>(");
+
+   first = true;
+   for (auto iu : conditionIUs) {
+      if (first) 
+         first = false;
+      else
+         out.write(", ");
+
+      out.writeIU(iu);
+   }
+
+   out.write(")));\n");
 
    return opIU;
 }
@@ -62,16 +92,7 @@ Map::Map(unique_ptr<Operator> input, vector<Entry> computations)
 OperatorIU Map::generate(SQLWriter& out)
 // Generate SQL
 {
-   out.write("(select *");
-   for (auto& c : computations) {
-      out.write(", ");
-      c.value->generate(out);
-      out.write(" as ");
-      out.writeIU(c.iu.get());
-   }
-   out.write(" from ");
-   input->generate(out);
-   out.write(" s)");
+   
 }
 //---------------------------------------------------------------------------
 SetOperation::SetOperation(unique_ptr<Operator> left, unique_ptr<Operator> right, vector<unique_ptr<Expression>> leftColumns, vector<unique_ptr<Expression>> rightColumns, vector<unique_ptr<IU>> resultColumns, Op op)

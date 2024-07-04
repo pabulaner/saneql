@@ -38,7 +38,7 @@ class OperatorIU {
 
    public:
    /// Constructor
-   OperatorIU() : name("o_" + to_string(++id)) {}
+   OperatorIU() : name("o_" + std::to_string(++id)) {}
 
    /// Get the name
    const std::string& getName() const { return name; }

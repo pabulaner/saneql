@@ -23,6 +23,18 @@ void Expression::generateOperand(SQLWriter& out)
    out.write(")");
 }
 //---------------------------------------------------------------------------
+std::vector<const IU*> Expression::combineIUs(const std::vector<std::vector<const IU*>>& ius) const
+// Combine IUs of provided expressions
+{
+   std::vector<const IU*> result;
+
+   for (auto iu : ius) {
+      result.insert(result.end(), iu.begin(), iu.end());
+   }
+
+   return result;
+}
+//---------------------------------------------------------------------------
 IURef::IURef(const IU* iu)
    : Expression(iu->getType()), iu(iu)
 // Constructor
@@ -108,6 +120,17 @@ InExpression::InExpression(unique_ptr<Expression> probe, vector<unique_ptr<Expre
    : Expression(Type::getBool().withNullable(probe->getType().isNullable() || any_of(values.begin(), values.end(), [](auto& e) { return e->getType().isNullable(); }))), probe(move(probe)), values(move(values)), collate(collate)
 // Constructor
 {
+}
+//---------------------------------------------------------------------------
+std::vector<const IU*> InExpression::getIUs() const {
+   std::vector<const IU*> result = probe->getIUs();
+
+   for (auto& exp : values) {
+      std::vector<const IU*> ius = exp->getIUs();
+      result.insert(result.end(), ius.begin(), ius.end());
+   }
+
+   return result;
 }
 //---------------------------------------------------------------------------
 void InExpression::generate(SQLWriter& out)
