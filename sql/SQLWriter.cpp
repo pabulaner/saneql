@@ -57,15 +57,15 @@ void SQLWriter::writeString(std::string_view str)
 // Write a string literal
 {
    auto& writer = *target;
-   writer += '\'';
+   writer += '"';
    for (char c : str) {
-      if (c == '\'') {
-         writer += "''";
+      if (c == '"') {
+         writer += "\"\"";
       } else {
          writer += c;
       }
    }
-   writer += '\'';
+   writer += '"';
 }
 //---------------------------------------------------------------------------
 void SQLWriter::writeType(Type type)

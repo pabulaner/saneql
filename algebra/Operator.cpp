@@ -49,8 +49,9 @@ OperatorIU Select::generate(SQLWriter& out)
    OperatorIU inputIU = input->generate(out);
    std::vector<const IU*> conditionIUs = condition->getIUs();
 
-   out.write("auto " + opIU.getName() + " = make_unique<Selection>(std::move(" + inputIU.getName() + "),\n");
-   out.write("makeCallExp(\"([](");
+   out.write("auto " + opIU.getName() + " = make_unique<Selection>(\n");
+   out.write("\tstd::move(" + inputIU.getName() + "),\n");
+   out.write("\tmakeCallExp(\"[](");
 
    bool first = true;
    for (auto iu : conditionIUs) {
@@ -65,8 +66,8 @@ OperatorIU Select::generate(SQLWriter& out)
 
    out.write("))) { return ");
    condition->generate(out);
-   out.write(" })\",\n");
-   out.write("make_unique<IUExp>(");
+   out.write("; }\",\n");
+   out.write("\tmake_unique<IUExp>(");
 
    first = true;
    for (auto iu : conditionIUs) {
@@ -92,7 +93,60 @@ Map::Map(unique_ptr<Operator> input, vector<Entry> computations)
 OperatorIU Map::generate(SQLWriter& out)
 // Generate SQL
 {
-   
+   OperatorIU inputIU = input->generate(out);
+
+   for (int i = 0; i < computations.size(); i++) {
+      OperatorIU opIU;
+      auto& c = computations[i];
+
+      out.write("auto " + opIU.getName() + " = make_unique<Map>(\n");
+
+      out.write("\tstd::move(" + inputIU.getName() + "),\n");
+
+      out.write("\tmakeCallExp(\"[](");
+      
+      bool first = true;
+      for (auto& iu : c.value->getIUs()) {
+         if (first) 
+            first = false;
+         else 
+            out.write(", ");
+
+         out.write("auto& ");
+         out.writeIU(iu);
+      }
+
+      out.write(") { return ");
+      c.value->generate(out);
+      out.write("; }\", ");
+
+      first = true;
+      for (auto& iu : c.value->getIUs()) {
+         if (first) 
+            first = false;
+         else 
+            out.write(", ");
+
+         out.writeIU(iu);
+      }
+
+      out.write("),\n");
+
+      out.write("\t\"");
+      out.writeIU(c.iu.get());
+      out.write("\",\n");
+      out.write("\tType::Unknown);\n");
+
+      out.write("IU* ");
+      out.writeIU(c.iu.get());
+      out.write(" = " + opIU.getName() + "->getIU(\"");
+      out.writeIU(c.iu.get());
+      out.write("\"));\n");
+
+      inputIU = opIU;
+   }
+
+   return inputIU;
 }
 //---------------------------------------------------------------------------
 SetOperation::SetOperation(unique_ptr<Operator> left, unique_ptr<Operator> right, vector<unique_ptr<Expression>> leftColumns, vector<unique_ptr<Expression>> rightColumns, vector<unique_ptr<IU>> resultColumns, Op op)

@@ -1,2 +1,3 @@
 part
 .filter(p_size = 15 && p_name = 'hello world')
+.map({p_bigger_size:=p_size + 10, p_bigger_name:=p_name + 'hello'})

@@ -55,11 +55,7 @@ void ConstExpression::generate(SQLWriter& out)
    } else {
       auto type = getType();
       if ((type.getType() != Type::Char) && (type.getType() != Type::Varchar) && (type.getType() != Type::Text)) {
-         out.write("cast(");
-         out.writeString(value);
-         out.write(" as ");
-         out.writeType(type);
-         out.write(")");
+         out.write(value);
       } else {
          out.writeString(value);
       }
@@ -69,10 +65,10 @@ void ConstExpression::generate(SQLWriter& out)
 void CastExpression::generate(SQLWriter& out)
 // Generate SQL
 {
-   out.write("cast(");
-   input->generate(out);
-   out.write(" as ");
+   out.write("(");
    out.writeType(getType());
+   out.write(")(");
+   input->generate(out);
    out.write(")");
 }
 //---------------------------------------------------------------------------
@@ -87,8 +83,8 @@ void ComparisonExpression::generate(SQLWriter& out)
 {
    left->generateOperand(out);
    switch (mode) {
-      case Mode::Equal: out.write(" = "); break;
-      case Mode::NotEqual: out.write(" <> "); break;
+      case Mode::Equal: out.write(" == "); break;
+      case Mode::NotEqual: out.write(" != "); break;
       case Mode::Is: out.write(" is not distinct from "); break;
       case Mode::IsNot: out.write(" is distinct from "); break;
       case Mode::Less: out.write(" < "); break;
@@ -166,9 +162,9 @@ void BinaryExpression::generate(SQLWriter& out)
       case Operation::Div: out.write(" / "); break;
       case Operation::Mod: out.write(" % "); break;
       case Operation::Power: out.write(" ^ "); break;
-      case Operation::Concat: out.write(" || "); break;
-      case Operation::And: out.write(" and "); break;
-      case Operation::Or: out.write(" or "); break;
+      case Operation::Concat: out.write(" + "); break;
+      case Operation::And: out.write(" && "); break;
+      case Operation::Or: out.write(" || "); break;
    }
    right->generateOperand(out);
 }
