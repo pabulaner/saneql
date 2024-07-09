@@ -1,9 +1,17 @@
+#pragma once
+
 #include <vector>
 #include <memory>
 #include <unordered_map>
 #include <string>
+#include <functional>
 
-#include "algebra/Operator.hpp"
+namespace saneql {
+class Type;
+namespace algebra {
+class IU;
+}
+}
 
 using namespace saneql;
 using namespace saneql::algebra;
@@ -36,15 +44,6 @@ class CppIU {
     const std::string& getName() const { return name; }
 };
 
-class Lambda {
-    /// The params
-    std::vector<const IU*> params;
-
-    public:
-    /// Get the params
-    const std::vector<const IU*>& getParams() const { return params; }
-};
-
 class CppWriter {
     /// The target
     std::string* target;
@@ -62,9 +61,9 @@ class CppWriter {
     /// All assigned IU names
     std::unordered_map<const IU*, std::string> iuNames;
 
+    public:
     /// Create a cpp IU
     CppIU* createCppIU(CppIU::Type type);
-
     /// Write a string
     void write(const std::string& content);
     /// Write a string with a linebreak
@@ -75,16 +74,17 @@ class CppWriter {
     void writeType(Type type);
     /// Write cpp type
     void writeType(CppIU::Type type);
-
-public:
     /// Write struct to structResult
-    const CppIU* writeStruct(const std::vector<CppIU*>& fields);
+    const CppIU* writeStruct(const std::vector<const CppIU*>& fields);
     /// Write operator to operatorResult
-    const CppIU* writeOperator(const std::vector<const IU*>& params, const std::vector<Lambda>& lambdas);
+    const CppIU* writeOperator(CppIU::Type type, const std::vector<std::string>& params, const std::function<void()> lambda);
+    /// Write lambda
+    void writeLambda(std::function<void()> lambda);
     /// Write IU to operatorResult and declare it in iuResult
     void writeIU(const IU* iu);
 
-    // void writeLambda(const std::vector<IU*>& params, );
+    /// Get the final result
+    std::string getResult() const;
 };
 
 } // namespace adapter

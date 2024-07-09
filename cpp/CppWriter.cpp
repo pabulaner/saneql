@@ -37,12 +37,12 @@ void CppWriter::writeTabs() const {
 void CppWriter::writeType(Type type) {
     auto& writer = *target;
     switch (type.getType()) {
-        case Type::Unknown: writer += "unknown"; break; // this can only happen for NULL values
-        case Type::Bool: writer += "boolean"; break;
-        case Type::Integer: writer += "integer"; break;
-        case Type::Decimal: writer += "decimal(" + std::to_string(type.getPrecision()) + "," + std::to_string(type.getScale()) + ")"; break;
-        case Type::Char: writer += "char(" + std::to_string(type.getLength()) + ")"; break;
-        case Type::Varchar: writer += "varchar(" + std::to_string(type.getLength()) + ")"; break;
+        case Type::Unknown: writer += "auto"; break; // this can only happen for NULL values
+        case Type::Bool: writer += "bool"; break;
+        case Type::Integer: writer += "int"; break;
+        case Type::Decimal: writer += "double"; break;
+        case Type::Char: writer += "varchar<" + std::to_string(type.getLength()) + ">"; break;
+        case Type::Varchar: writer += "varchar<" + std::to_string(type.getLength()) + ">"; break;
         case Type::Text: writer += "text"; break;
         case Type::Date: writer += "date"; break;
         case Type::Interval: writer += "interval"; break;
@@ -56,7 +56,7 @@ void CppWriter::writeType(CppIU::Type type) {
     }
 }
 
-const CppIU* CppWriter::writeStruct(const std::vector<CppIU*>& fields) {
+const CppIU* CppWriter::writeStruct(const std::vector<const CppIU*>& fields) {
     target = &structResult;
     CppIU* iu = createCppIU(CppIU::Type::Struct);
 
@@ -69,6 +69,35 @@ const CppIU* CppWriter::writeStruct(const std::vector<CppIU*>& fields) {
     }   
 
     writeln("};");
+    return iu;
+}
+
+const CppIU* CppWriter::writeOperator(CppIU::Type type, const std::vector<std::string>& params, std::function<void()> lambda) {
+    target = &structResult;
+    CppIU* iu = createCppIU(CppIU::Type::Struct);
+
+    writeType(type);
+    write(" " + iu->getName() + "(");
+
+    bool first = true;
+    for (auto& param : params) {
+        if (first) 
+            first = false;
+        else
+            write(", ");
+
+        write(param);
+    }
+
+    // produce lambda
+    lambda();
+
+    writeln(");");
+    return iu;
+}
+
+void CppWriter::writeLambda(std::function<void()> lambda) {
+    lambda();
 }
 
 void CppWriter::writeIU(const IU* iu) {
@@ -86,6 +115,10 @@ void CppWriter::writeIU(const IU* iu) {
 
         iuNames[iu] = move(name);
     }
+}
+
+std::string CppWriter::getResult() const {
+    return structResult + iuResult + operatorResult;
 }
 
 } // namespace adapter
