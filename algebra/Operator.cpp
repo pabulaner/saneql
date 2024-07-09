@@ -41,7 +41,7 @@ const CppIU* TableScan::generate(CppWriter& out, const CppIU* next)
          out.write("}");
       });
 
-   out.writeBegin(opIU);
+   out.writeProcess(opIU);
    return opIU;
 }
 //---------------------------------------------------------------------------

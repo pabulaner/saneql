@@ -54,8 +54,8 @@ class CppWriter {
     std::string iuResult;
     /// The operator result
     std::string operatorResult;
-    /// The begin result
-    std::string beginResult;
+    /// The process result
+    std::string processResult;
     /// The tab count
     std::size_t tabCount;
 
@@ -84,7 +84,7 @@ class CppWriter {
     /// Write operator to operatorResult
     const CppIU* writeOperator(CppIU::Type type, const std::vector<std::string>& params, const std::function<void()> lambda);
     /// Write begin
-    void writeBegin(const CppIU* opIU);
+    void writeProcess(const CppIU* opIU);
     /// Write IU to operatorResult and declare it in iuResult
     void writeIU(const IU* iu);
 

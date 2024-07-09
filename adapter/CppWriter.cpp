@@ -107,9 +107,9 @@ const CppIU* CppWriter::writeOperator(CppIU::Type type, const std::vector<std::s
     return iu;
 }
 
-void CppWriter::writeBegin(const CppIU* opIU) {
-    saveTarget(&beginResult);
-    writeln(opIU->getName() + ".begin();");
+void CppWriter::writeProcess(const CppIU* opIU) {
+    saveTarget(&processResult);
+    writeln(opIU->getName() + ".process();");
     restoreTarget();
 }
 
@@ -137,7 +137,7 @@ std::string CppWriter::getResult() const {
     return structResult
         + iuResult
         + operatorResult
-        + beginResult;
+        + processResult;
 }
 
 void CppWriter::saveTarget(std::string* target) {

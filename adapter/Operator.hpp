@@ -1,23 +1,25 @@
 #pragma once
 
+#include "vmcache/vmcache.hpp"
+
 namespace adapter {
 
-template <typename TNext, typename TFn>
+template <typename TNext, typename TRecord, typename TFn>
 class ScanOp {
     /// The next operator
     TNext* next;
     /// The input
-    int input;
+    vmcacheAdapter<TRecord> adapter;
     /// The scan function
     TFn scan;
 
     public:
     /// The constructor
-    ScanOp(TNext* next, TFn scan) : next(next), scan(scan) {}
+    ScanOp(TNext* next, vmcacheAdapter<TRecord> adapter, TFn scan) : next(next), adapter(adapter), scan(scan) {}
 
-    void begin() {
+    void process() {
         next->begin();
-        input->forEach([&](auto& key, auto& value) {
+        adapter.forEach([&](auto& key, auto& value) {
             scan(key, value);
             next->process();
         });
@@ -42,6 +44,25 @@ class SelectOp {
         if (select()) {
             next->process();
         }
+    }
+};
+
+template <typename TNext, typename TFn>
+class MapOp {
+    /// The next operator
+    TNext* next;
+    /// The map function
+    TFn map;
+
+    SelectOp(TNext* next, TFn map) : next(next), map(map) {}
+
+    void begin() { next->begin(); }
+
+    void end() { next->end(); }
+
+    void process() {
+        map();
+        next->process();
     }
 };
 

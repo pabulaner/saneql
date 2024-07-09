@@ -1,0 +1,6 @@
+#include "Database.hpp"
+
+int main(int argc, char** argv) {
+    adapter::Database* db = adapter::Database::getInstance();
+    #include "query.cpp"
+}
