@@ -10,6 +10,12 @@
 // (c) 2023 Thomas Neumann
 // SPDX-License-Identifier: BSD-3-Clause
 //---------------------------------------------------------------------------
+namespace adapter {
+class CppWriter;
+}
+//---------------------------------------------------------------------------
+using namespace adapter;
+//---------------------------------------------------------------------------
 namespace saneql {
 //---------------------------------------------------------------------------
 enum class Collate : uint8_t;
@@ -38,9 +44,9 @@ class Expression {
    virtual std::vector<const IU*> getIUs() const = 0;
 
    /// Generate SQL
-   virtual void generate(SQLWriter& out) = 0;
+   virtual void generate(CppWriter& out) = 0;
    /// Generate SQL in a form that is suitable as operand
-   virtual void generateOperand(SQLWriter& out);
+   virtual void generateOperand(CppWriter& out);
 
    protected:
    std::vector<const IU*> combineIUs(const std::vector<std::vector<const IU*>>& ius) const;
@@ -61,9 +67,9 @@ class IURef : public Expression {
    std::vector<const IU*> getIUs() const override { return {iu}; }
 
    /// Generate SQL
-   void generate(SQLWriter& out) override;
+   void generate(CppWriter& out) override;
    /// Generate SQL in a form that is suitable as operand
-   void generateOperand(SQLWriter& out) override { generate(out); }
+   void generateOperand(CppWriter& out) override { generate(out); }
 };
 //---------------------------------------------------------------------------
 /// A constant value
@@ -83,9 +89,9 @@ class ConstExpression : public Expression {
    std::vector<const IU*> getIUs() const override { return {}; }
 
    /// Generate SQL
-   void generate(SQLWriter& out) override;
+   void generate(CppWriter& out) override;
    /// Generate SQL in a form that is suitable as operand
-   void generateOperand(SQLWriter& out) override { generate(out); }
+   void generateOperand(CppWriter& out) override { generate(out); }
 };
 //---------------------------------------------------------------------------
 /// A cast expression
@@ -101,7 +107,7 @@ class CastExpression : public Expression {
    std::vector<const IU*> getIUs() const override { return input->getIUs(); }
 
    /// Generate SQL
-   void generate(SQLWriter& out) override;
+   void generate(CppWriter& out) override;
 };
 //---------------------------------------------------------------------------
 /// A comparison expression
@@ -136,7 +142,7 @@ class ComparisonExpression : public Expression {
    }
 
    /// Generate SQL
-   void generate(SQLWriter& out) override;
+   void generate(CppWriter& out) override;
 };
 //---------------------------------------------------------------------------
 /// A between expression
@@ -157,7 +163,7 @@ class BetweenExpression : public Expression {
    }
 
    /// Generate SQL
-   void generate(SQLWriter& out) override;
+   void generate(CppWriter& out) override;
 };
 //---------------------------------------------------------------------------
 /// An in expression
@@ -178,7 +184,7 @@ class InExpression : public Expression {
    std::vector<const IU*> getIUs() const override;
 
    /// Generate SQL
-   void generate(SQLWriter& out) override;
+   void generate(CppWriter& out) override;
 };
 //---------------------------------------------------------------------------
 /// A binary expression
@@ -211,7 +217,7 @@ class BinaryExpression : public Expression {
    }
 
    /// Generate SQL
-   void generate(SQLWriter& out) override;
+   void generate(CppWriter& out) override;
 };
 //---------------------------------------------------------------------------
 /// An unary expression
@@ -236,7 +242,7 @@ class UnaryExpression : public Expression {
    std::vector<const IU*> getIUs() const override { return input->getIUs(); }
 
    /// Generate SQL
-   void generate(SQLWriter& out) override;
+   void generate(CppWriter& out) override;
 };
 //---------------------------------------------------------------------------
 /// An extract expression
@@ -261,7 +267,7 @@ class ExtractExpression : public Expression {
    std::vector<const IU*> getIUs() const override { return input->getIUs(); }
 
    /// Generate SQL
-   void generate(SQLWriter& out) override;
+   void generate(CppWriter& out) override;
 };
 //---------------------------------------------------------------------------
 /// A substring expression
@@ -280,7 +286,7 @@ class SubstrExpression : public Expression {
    }
 
    /// Generate SQL
-   void generate(SQLWriter& out) override;
+   void generate(CppWriter& out) override;
 };
 //---------------------------------------------------------------------------
 /// A simple case expression
@@ -304,7 +310,7 @@ class SimpleCaseExpression : public Expression {
    std::vector<const IU*> getIUs() const override {}
 
    /// Generate SQL
-   void generate(SQLWriter& out) override;
+   void generate(CppWriter& out) override;
 };
 //---------------------------------------------------------------------------
 /// A searched case expression
@@ -326,7 +332,7 @@ class SearchedCaseExpression : public Expression {
    std::vector<const IU*> getIUs() const override {}
 
    /// Generate SQL
-   void generate(SQLWriter& out) override;
+   void generate(CppWriter& out) override;
 };
 //---------------------------------------------------------------------------
 /// Helper for aggregation steps
@@ -404,7 +410,7 @@ class Aggregate : public Expression, public AggregationLike {
    std::vector<const IU*> getIUs() const override {}
 
    // Generate SQL
-   void generate(SQLWriter& out) override;
+   void generate(CppWriter& out) override;
 };
 //---------------------------------------------------------------------------
 /// A foreign call expression
@@ -430,7 +436,7 @@ struct ForeignCall : public Expression {
    std::vector<const IU*> getIUs() const override {}
    
    /// Generate SQL
-   void generate(SQLWriter& out) override;
+   void generate(CppWriter& out) override;
 };
 //---------------------------------------------------------------------------
 }

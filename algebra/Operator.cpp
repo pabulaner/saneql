@@ -23,10 +23,11 @@ const CppIU* TableScan::generate(CppWriter& out, const CppIU* next)
 // Generate SQL
 {
    auto type = adapter::CppIU::Type::ScanOp;
-   std::vector<std::string> params{next->getName(), "db." + name};
+   std::string nextParam = next->getName();
+   std::string dbParam = "db." + name;
 
    const adapter::CppIU* opIU = out.writeOperator(
-      type, params,
+      type, {nextParam, dbParam},
       [&]() {  
          out.writeln("[&](auto& key, auto& value) {");
 
@@ -42,6 +43,7 @@ const CppIU* TableScan::generate(CppWriter& out, const CppIU* next)
 
    return opIU;
 }
+/*
 //---------------------------------------------------------------------------
 Select::Select(unique_ptr<Operator> input, unique_ptr<Expression> condition)
    : input(move(input)), condition(move(condition))
@@ -463,6 +465,7 @@ const CppIU* InlineTable::generate(CppWriter& out, const CppIU* next)
    if (!rowCount) out.write(" limit 0");
    out.write(")");
 }
+*/
 //---------------------------------------------------------------------------
 }
 //---------------------------------------------------------------------------

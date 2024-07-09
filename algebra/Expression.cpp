@@ -1,6 +1,7 @@
 #include "algebra/Expression.hpp"
 #include "algebra/Operator.hpp"
 #include "sql/SQLWriter.hpp"
+#include "cpp/CppWriter.hpp"
 #include <algorithm>
 #include <utility>
 //---------------------------------------------------------------------------
@@ -15,7 +16,7 @@ Expression::~Expression()
 {
 }
 //---------------------------------------------------------------------------
-void Expression::generateOperand(SQLWriter& out)
+void Expression::generateOperand(CppWriter& out)
 // Generate SQL in a form that is suitable as operand
 {
    out.write("(");
@@ -41,13 +42,13 @@ IURef::IURef(const IU* iu)
 {
 }
 //---------------------------------------------------------------------------
-void IURef::generate(SQLWriter& out)
+void IURef::generate(CppWriter& out)
 // Generate SQL
 {
    out.writeIU(iu);
 }
 //---------------------------------------------------------------------------
-void ConstExpression::generate(SQLWriter& out)
+void ConstExpression::generate(CppWriter& out)
 // Generate SQL
 {
    if (null) {
@@ -55,18 +56,16 @@ void ConstExpression::generate(SQLWriter& out)
    } else {
       auto type = getType();
       if ((type.getType() != Type::Char) && (type.getType() != Type::Varchar) && (type.getType() != Type::Text)) {
-         out.write("cast(");
-         out.writeString(value);
-         out.write(" as ");
+         out.write("(");
          out.writeType(type);
-         out.write(")");
+         out.write(") " + value);
       } else {
-         out.writeString(value);
+         out.write("\"" + value + "\"");
       }
    }
 }
 //---------------------------------------------------------------------------
-void CastExpression::generate(SQLWriter& out)
+void CastExpression::generate(CppWriter& out)
 // Generate SQL
 {
    out.write("cast(");
@@ -82,13 +81,13 @@ ComparisonExpression::ComparisonExpression(unique_ptr<Expression> left, unique_p
 {
 }
 //---------------------------------------------------------------------------
-void ComparisonExpression::generate(SQLWriter& out)
+void ComparisonExpression::generate(CppWriter& out)
 // Generate SQL
 {
    left->generateOperand(out);
    switch (mode) {
-      case Mode::Equal: out.write(" = "); break;
-      case Mode::NotEqual: out.write(" <> "); break;
+      case Mode::Equal: out.write(" == "); break;
+      case Mode::NotEqual: out.write(" != "); break;
       case Mode::Is: out.write(" is not distinct from "); break;
       case Mode::IsNot: out.write(" is distinct from "); break;
       case Mode::Less: out.write(" < "); break;
@@ -106,7 +105,7 @@ BetweenExpression::BetweenExpression(unique_ptr<Expression> base, unique_ptr<Exp
 {
 }
 //---------------------------------------------------------------------------
-void BetweenExpression::generate(SQLWriter& out)
+void BetweenExpression::generate(CppWriter& out)
 // Generate SQL
 {
    base->generateOperand(out);
@@ -133,7 +132,7 @@ std::vector<const IU*> InExpression::getIUs() const {
    return result;
 }
 //---------------------------------------------------------------------------
-void InExpression::generate(SQLWriter& out)
+void InExpression::generate(CppWriter& out)
 // Generate SQL
 {
    probe->generateOperand(out);
@@ -155,7 +154,7 @@ BinaryExpression::BinaryExpression(unique_ptr<Expression> left, unique_ptr<Expre
 {
 }
 //---------------------------------------------------------------------------
-void BinaryExpression::generate(SQLWriter& out)
+void BinaryExpression::generate(CppWriter& out)
 // Generate SQL
 {
    left->generateOperand(out);
@@ -179,7 +178,7 @@ UnaryExpression::UnaryExpression(unique_ptr<Expression> input, Type resultType, 
 {
 }
 //---------------------------------------------------------------------------
-void UnaryExpression::generate(SQLWriter& out)
+void UnaryExpression::generate(CppWriter& out)
 // Generate SQL
 {
    switch (op) {
@@ -196,7 +195,7 @@ ExtractExpression::ExtractExpression(unique_ptr<Expression> input, Part part)
 {
 }
 //---------------------------------------------------------------------------
-void ExtractExpression::generate(SQLWriter& out)
+void ExtractExpression::generate(CppWriter& out)
 // Generate SQL
 {
    out.write("extract(");
@@ -216,7 +215,7 @@ SubstrExpression::SubstrExpression(unique_ptr<Expression> value, unique_ptr<Expr
 {
 }
 //---------------------------------------------------------------------------
-void SubstrExpression::generate(SQLWriter& out)
+void SubstrExpression::generate(CppWriter& out)
 // Generate SQL
 {
    out.write("substring(");
@@ -238,7 +237,7 @@ SimpleCaseExpression::SimpleCaseExpression(unique_ptr<Expression> value, Cases c
 {
 }
 //---------------------------------------------------------------------------
-void SimpleCaseExpression::generate(SQLWriter& out)
+void SimpleCaseExpression::generate(CppWriter& out)
 // Generate SQL
 {
    out.write("case ");
@@ -260,7 +259,7 @@ SearchedCaseExpression::SearchedCaseExpression(Cases cases, unique_ptr<Expressio
 {
 }
 //---------------------------------------------------------------------------
-void SearchedCaseExpression::generate(SQLWriter& out)
+void SearchedCaseExpression::generate(CppWriter& out)
 // Generate SQL
 {
    out.write("case");
@@ -281,7 +280,7 @@ Aggregate::Aggregate(unique_ptr<Operator> input, vector<Aggregation> aggregates,
 {
 }
 //---------------------------------------------------------------------------
-void Aggregate::generate(SQLWriter& out)
+void Aggregate::generate(CppWriter& out)
 // Generate SQL
 {
    out.write("(select ");
@@ -313,7 +312,8 @@ void Aggregate::generate(SQLWriter& out)
          out.writeIU(a.iu.get());
       }
       out.write(" from ");
-      input->generate(out);
+      // TODO: implement
+      // input->generate(out);
       out.write(" s");
       out.write(") s");
    }
@@ -326,7 +326,7 @@ ForeignCall::ForeignCall(string name, Type returnType, vector<unique_ptr<Express
 {
 }
 //---------------------------------------------------------------------------
-void ForeignCall::generate(SQLWriter& out) {
+void ForeignCall::generate(CppWriter& out) {
    switch (callType) {
       case CallType::Function: {
          out.write(name);
