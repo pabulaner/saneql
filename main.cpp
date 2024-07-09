@@ -55,9 +55,23 @@ int main(int argc, char* argv[]) {
       if (res.isScalar()) {
          res.scalar()->generate(cpp);
       } else {
-         auto out = cpp.createCppIU(adapter::CppIU::Type::OutputOp);
+         auto type = adapter::CppIU::Type::OutputOp;
          auto tree = res.table().get();
-         const adapter::CppIU* opIU = tree->generate(cpp, out);
+
+         auto opIU = cpp.writeOperator(type, {}, [&]() {
+            cpp.writeln("[&]() {");
+            cpp.write("std::cout");
+
+            for (auto& c : res.getBinding().getColumns()) {
+               cpp.write(" << ");
+               cpp.writeIU(c.iu);
+            }
+
+            cpp.writeln(" << std::endl;");
+            cpp.write("}");
+         });
+
+         tree->generate(cpp, opIU);
       }
       cout << cpp.getResult() << endl;
    } catch (const exception& e) {

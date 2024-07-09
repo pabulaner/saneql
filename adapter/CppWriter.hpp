@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <string>
 #include <functional>
+#include <stack>
 
 namespace saneql {
 class Type;
@@ -46,13 +47,15 @@ class CppIU {
 
 class CppWriter {
     /// The target
-    std::string* target;
+    std::stack<std::string*> targetStack;
     /// The struct result
     std::string structResult;
     /// The IU result
     std::string iuResult;
     /// The operator result
     std::string operatorResult;
+    /// The begin result
+    std::string beginResult;
     /// The tab count
     std::size_t tabCount;
 
@@ -62,8 +65,10 @@ class CppWriter {
     std::unordered_map<const IU*, std::string> iuNames;
 
     public:
+    /// The constructor
+    CppWriter() : tabCount(0) {}
     /// Create a cpp IU
-    CppIU* createCppIU(CppIU::Type type);
+    const CppIU* createCppIU(CppIU::Type type);
     /// Write a string
     void write(const std::string& content);
     /// Write a string with a linebreak
@@ -78,13 +83,19 @@ class CppWriter {
     const CppIU* writeStruct(const std::vector<const CppIU*>& fields);
     /// Write operator to operatorResult
     const CppIU* writeOperator(CppIU::Type type, const std::vector<std::string>& params, const std::function<void()> lambda);
-    /// Write lambda
-    void writeLambda(std::function<void()> lambda);
+    /// Write begin
+    void writeBegin(const CppIU* opIU);
     /// Write IU to operatorResult and declare it in iuResult
     void writeIU(const IU* iu);
 
     /// Get the final result
     std::string getResult() const;
+
+    private:
+    /// Save the target
+    void saveTarget(std::string* target);
+    /// Restore the target
+    void restoreTarget();
 };
 
 } // namespace adapter
