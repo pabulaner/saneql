@@ -5,6 +5,7 @@
 #include "parser/SaneQLParser.hpp"
 #include "semana/SemanticAnalysis.hpp"
 #include "sql/SQLWriter.hpp"
+#include "cpp/CppWriter.hpp"
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -50,27 +51,15 @@ int main(int argc, char* argv[]) {
    SemanticAnalysis semana(schema);
    try {
       auto res = semana.analyzeQuery(tree);
-      SQLWriter sql;
+      CppWriter cpp;
       if (res.isScalar()) {
-         res.scalar()->generate(sql);
+         res.scalar()->generate(cpp);
       } else {
+         auto out = cpp.createCppIU(adapter::CppIU::Type::OutputOp);
          auto tree = res.table().get();
-         algebra::OperatorIU opIU = tree->generate(sql);
-
-         sql.write("produceAndPrint(std::move(" + opIU.getName() + "), {");
-
-         bool first = true;
-         for (auto& c : res.getBinding().getColumns()) {
-            if (first)
-               first = false;
-            else
-               sql.write(", ");
-
-            sql.writeIU(c.iu);
-         }
-         sql.write("});\n");
+         const adapter::CppIU* opIU = tree->generate(cpp, out);
       }
-      cout << sql.getResult() << endl;
+      cout << cpp.getResult() << endl;
    } catch (const exception& e) {
       cerr << e.what() << endl;
       return 1;
