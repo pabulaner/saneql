@@ -52,6 +52,12 @@ $(PREFIX)saneql: $(obj)
 $(PREFIX)astgen: $(PREFIX)makeutil/astgen.o
 	$(CXX) $(CXXFLAGS) -o$@ $^
 
-query:
+# compile
+cquery:
 	./bin/saneql ./query/query.sane > ./adapter/resource/query.hpp
 	$(CXX) $(CXXFLAGS) $(qsrc) -laio -o ./bin/query
+
+# run
+rquery:
+	./setup.sh
+	./bin/query
