@@ -24,13 +24,21 @@ void Expression::generateOperand(CppWriter& out)
    out.write(")");
 }
 //---------------------------------------------------------------------------
-std::vector<const IU*> Expression::combineIUs(const std::vector<std::vector<const IU*>>& ius) const
+std::vector<Expression*> Expression::combineExpressions(const std::vector<std::unique_ptr<Expression>*>& first, const std::vector<std::vector<std::unique_ptr<Expression>>*>& second) const {
 // Combine IUs of provided expressions
 {
-   std::vector<const IU*> result;
+   std::vector<Expression*> result;
+   result.push_back(this);
 
-   for (auto iu : ius) {
-      result.insert(result.end(), iu.begin(), iu.end());
+   for (auto& e : first) {
+      auto res = (*e)->getExpressions();
+      result.insert(result.end(), res.begin(), res.end());
+   }
+   for (auto v : second) {
+      for (auto& e : *v) {
+         auto res = e->getExpressions();
+         result.insert(result.end(), res.begin(), res.end());
+      }
    }
 
    return result;

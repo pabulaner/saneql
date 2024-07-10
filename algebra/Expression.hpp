@@ -40,8 +40,8 @@ class Expression {
 
    /// Get the result type
    Type getType() const { return type; }
-   /// Get the IUs
-   virtual std::vector<const IU*> getIUs() const = 0;
+   /// Get the expressions
+   virtual std::vector<Expression*> getExpressions() const = 0;
 
    /// Generate SQL
    virtual void generate(CppWriter& out) = 0;
@@ -49,7 +49,7 @@ class Expression {
    virtual void generateOperand(CppWriter& out);
 
    protected:
-   std::vector<const IU*> combineIUs(const std::vector<std::vector<const IU*>>& ius) const;
+   std::vector<Expression*> combineExpressions(const std::vector<std::unique_ptr<Expression>*>& first = {}, const std::vector<std::vector<std::unique_ptr<Expression>>*>& second = {}) const;
 };
 //---------------------------------------------------------------------------
 /// An IU reference
@@ -64,7 +64,7 @@ class IURef : public Expression {
    /// Get the IU
    const IU* getIU() const { return iu; }
    /// Get the IUs
-   std::vector<const IU*> getIUs() const override { return {iu}; }
+   std::vector<Expression*> getExpressions() const override { return {this}; }
 
    /// Generate SQL
    void generate(CppWriter& out) override;
@@ -86,7 +86,7 @@ class ConstExpression : public Expression {
    ConstExpression(std::nullptr_t, Type type) : Expression(type), null(true) {}
 
    /// Get the IUs
-   std::vector<const IU*> getIUs() const override { return {}; }
+   std::vector<Expression*> getExpressions() const override { return {this}; }
 
    /// Generate SQL
    void generate(CppWriter& out) override;
@@ -104,7 +104,7 @@ class CastExpression : public Expression {
    CastExpression(std::unique_ptr<Expression> input, Type type) : Expression(type), input(move(input)) {}
 
    /// Get the IUs
-   std::vector<const IU*> getIUs() const override { return input->getIUs(); }
+   std::vector<Expression*> getExpressions() const override { return combineExpressions({&input}) }
 
    /// Generate SQL
    void generate(CppWriter& out) override;
@@ -137,9 +137,7 @@ class ComparisonExpression : public Expression {
    ComparisonExpression(std::unique_ptr<Expression> left, std::unique_ptr<Expression> right, Mode mode, Collate collate);
 
    /// Get the IUs
-   std::vector<const IU*> getIUs() const override {
-      return combineIUs({left->getIUs(), right->getIUs()});
-   }
+   std::vector<Expression*> getExpressions() const override { return combineExpressions({&left, &right}); }
 
    /// Generate SQL
    void generate(CppWriter& out) override;
@@ -158,9 +156,7 @@ class BetweenExpression : public Expression {
    BetweenExpression(std::unique_ptr<Expression> base, std::unique_ptr<Expression> lower, std::unique_ptr<Expression> upper, Collate collate);
 
    /// Get the IUs
-   std::vector<const IU*> getIUs() const override {
-      return combineIUs({base->getIUs(), lower->getIUs(), upper->getIUs()});
-   }
+   std::vector<Expression*> getExpressions() const override { return combineExpressions({&base, &lower, &upper}); }
 
    /// Generate SQL
    void generate(CppWriter& out) override;
@@ -181,7 +177,7 @@ class InExpression : public Expression {
    InExpression(std::unique_ptr<Expression> probe, std::vector<std::unique_ptr<Expression>> values, Collate collate);
 
    /// Get the IUs
-   std::vector<const IU*> getIUs() const override;
+   std::vector<Expression*> getExpressions() const override { return combineExpressions({&probe}, {&values}); }
 
    /// Generate SQL
    void generate(CppWriter& out) override;
@@ -212,9 +208,7 @@ class BinaryExpression : public Expression {
    BinaryExpression(std::unique_ptr<Expression> left, std::unique_ptr<Expression> right, Type resultType, Operation op);
 
    /// Get the IUs
-   std::vector<const IU*> getIUs() const override {
-      return combineIUs({left->getIUs(), right->getIUs()});
-   }
+   std::vector<Expression*> getExpressions() const override { return combineExpressions({&left, &right}); }
 
    /// Generate SQL
    void generate(CppWriter& out) override;
@@ -239,7 +233,7 @@ class UnaryExpression : public Expression {
    UnaryExpression(std::unique_ptr<Expression> input, Type resultType, Operation op);
 
    /// Get the IUs
-   std::vector<const IU*> getIUs() const override { return input->getIUs(); }
+   std::vector<Expression*> getExpressions() const override { return combineExpressions({&input}); }
 
    /// Generate SQL
    void generate(CppWriter& out) override;
@@ -264,7 +258,7 @@ class ExtractExpression : public Expression {
    ExtractExpression(std::unique_ptr<Expression> input, Part part);
 
    /// Get the IUs
-   std::vector<const IU*> getIUs() const override { return input->getIUs(); }
+   std::vector<Expression*> getExpressions() const override { return combineExpressions({input}); }
 
    /// Generate SQL
    void generate(CppWriter& out) override;
@@ -281,9 +275,7 @@ class SubstrExpression : public Expression {
    SubstrExpression(std::unique_ptr<Expression> value, std::unique_ptr<Expression> from, std::unique_ptr<Expression> len);
 
    /// Get the IUs
-   std::vector<const IU*> getIUs() const override { 
-      return combineIUs({value->getIUs(), from->getIUs(), len->getIUs()});
-   }
+   std::vector<Expression*> getExpressions() const override { return combineExpressions({&value, &from, &len}); }
 
    /// Generate SQL
    void generate(CppWriter& out) override;
@@ -307,7 +299,7 @@ class SimpleCaseExpression : public Expression {
 
    // TODO: implement
    /// Get the IUs
-   std::vector<const IU*> getIUs() const override {}
+   std::vector<Expression*> getExpressions() const override { return {}; }
 
    /// Generate SQL
    void generate(CppWriter& out) override;
@@ -329,7 +321,7 @@ class SearchedCaseExpression : public Expression {
 
    // TODO: implement
    /// Get the IUs
-   std::vector<const IU*> getIUs() const override {}
+   std::vector<Expression*> getExpressions() const override { return {}; }
 
    /// Generate SQL
    void generate(CppWriter& out) override;
@@ -407,7 +399,7 @@ class Aggregate : public Expression, public AggregationLike {
 
    // TODO: implement
    /// Get the IUs
-   std::vector<const IU*> getIUs() const override {}
+   std::vector<Expression*> getExpressions() const override { return {}; }
 
    // Generate SQL
    void generate(CppWriter& out) override;
@@ -433,7 +425,7 @@ struct ForeignCall : public Expression {
 
    // TODO: implement
    /// Get the IUs
-   std::vector<const IU*> getIUs() const override {}
+   std::vector<Expression*> getExpressions() const override { return {}; }
    
    /// Generate SQL
    void generate(CppWriter& out) override;
