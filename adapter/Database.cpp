@@ -1,4 +1,7 @@
 #include "Database.hpp"
+#include "Operator.hpp"
+
+using namespace adapter;
 
 namespace adapter {
 
@@ -45,3 +48,8 @@ Database::Database(u32 threadCount, u32 warehouseCount)
 }
 
 } // namespace adapter
+
+int main(int argc, char** argv) {
+    Database* db = Database::getInstance();
+    #include "resource/query.hpp"
+}
