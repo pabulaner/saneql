@@ -5,17 +5,17 @@
 namespace adapter {
 
 template <typename TNext, typename TRecord, typename TFn>
-class ScanOp {
+struct ScanOp {
     /// The next operator
     TNext* next;
     /// The input
-    vmcacheAdapter<TRecord> adapter;
+    vmcacheAdapter<TRecord>& adapter;
     /// The scan function
     TFn scan;
 
     public:
     /// The constructor
-    ScanOp(TNext* next, vmcacheAdapter<TRecord> adapter, TFn scan) : next(next), adapter(adapter), scan(scan) {}
+    ScanOp(TNext* next, vmcacheAdapter<TRecord>& adapter, TFn scan) : next(next), adapter(adapter), scan(scan) {}
 
     void process() {
         next->begin();
@@ -28,7 +28,7 @@ class ScanOp {
 };
 
 template <typename TNext, typename TFn>
-class SelectOp {
+struct SelectOp {
     /// The next operator
     TNext* next;
     /// The select function
@@ -48,13 +48,13 @@ class SelectOp {
 };
 
 template <typename TNext, typename TFn>
-class MapOp {
+struct MapOp {
     /// The next operator
     TNext* next;
     /// The map function
     TFn map;
 
-    SelectOp(TNext* next, TFn map) : next(next), map(map) {}
+    MapOp(TNext* next, TFn map) : next(next), map(map) {}
 
     void begin() { next->begin(); }
 
@@ -67,11 +67,11 @@ class MapOp {
 };
 
 template <typename TFn>
-class OutputOp {
+struct OutputOp {
     /// The output function
     TFn output;
 
-    OutputOp(TFn select) : select(select) {}
+    OutputOp(TFn output) : output(output) {}
 
     void begin() {}
 

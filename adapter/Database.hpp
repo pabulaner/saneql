@@ -33,7 +33,7 @@ class Database {
     TPCCWorkload<vmcacheAdapter> tpcc;
 
     /// The constructor
-    Database();
+    Database(u32 threadCount, u32 warehouseCount);
 
     Database(const Database&) = delete;
     Database& operator=(const Database&) = delete;

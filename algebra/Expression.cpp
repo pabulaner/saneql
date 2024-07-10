@@ -1,7 +1,7 @@
 #include "algebra/Expression.hpp"
 #include "algebra/Operator.hpp"
 #include "sql/SQLWriter.hpp"
-#include "cpp/CppWriter.hpp"
+#include "adapter/CppWriter.hpp"
 #include <algorithm>
 #include <utility>
 //---------------------------------------------------------------------------

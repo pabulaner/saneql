@@ -1,6 +1,6 @@
 #include "algebra/Operator.hpp"
 #include "sql/SQLWriter.hpp"
-#include "cpp/CppWriter.hpp"
+#include "adapter/CppWriter.hpp"
 //---------------------------------------------------------------------------
 // (c) 2023 Thomas Neumann
 //---------------------------------------------------------------------------
@@ -23,13 +23,16 @@ const CppIU* TableScan::generate(CppWriter& out, const CppIU* next)
 // Generate SQL
 {
    auto type = adapter::CppIU::Type::ScanOp;
-   std::string nextParam = next->getName();
-   std::string dbParam = "db." + name;
+   std::string nextParam = "&" + next->getName();
+   std::string dbParam = "db->" + name;
 
    const adapter::CppIU* opIU = out.writeOperator(
       type, {nextParam, dbParam},
       [&]() {  
-         out.writeln("[&](auto& key, auto& value) {");
+         std::string valueType = "const " + name + "_t";
+         std::string keyType = valueType + "::Key";
+
+         out.writeln("[&](" + keyType + "& key, " + valueType + "& value) {");
 
          for (auto& c : columns) {
             out.writeIU(c.iu.get());
@@ -55,7 +58,7 @@ const CppIU* Select::generate(CppWriter& out, const CppIU* next)
 // Generate SQL
 {
    auto type = adapter::CppIU::Type::SelectOp;
-   std::string nextParam = next->getName();
+   std::string nextParam = "&" + next->getName();
 
    const adapter::CppIU* opIU = out.writeOperator(
       type, {nextParam},

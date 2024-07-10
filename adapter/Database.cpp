@@ -6,13 +6,17 @@ std::unique_ptr<Database> Database::instance = nullptr;
 
 Database* Database::getInstance() {
     if (instance.get() == nullptr) {
-        instance = std::make_unique<Database>();
+        u32 threadCount = envOr("THREADS", 1);
+        u32 warehouseCount = envOr("DATASIZE", 3);
+
+        Database* ptr = new Database(threadCount, warehouseCount);
+        instance = std::unique_ptr<Database>(ptr);
     }
 
     return instance.get();
 }
 
-Database::Database() 
+Database::Database(u32 threadCount, u32 warehouseCount) 
     : tpcc(warehouse, district, customer, customerwdl, history, neworder, order, order_wdc, orderline, item, stock, true, warehouseCount, true) 
 {
     if (bm.useExmap) {
@@ -24,9 +28,6 @@ Database::Database()
             exit(1);
         }
     }
-
-    u32 threadCount = envOr("THREADS", 1);
-    u64 warehouseCount = envOr("DATASIZE", 3);
 
     tpcc.loadItem();
     tpcc.loadWarehouse();
