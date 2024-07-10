@@ -61,3 +61,7 @@ cquery:
 rquery:
 	./setup.sh
 	./bin/query
+
+# compile and run
+crquery:
+	make cquery rquery

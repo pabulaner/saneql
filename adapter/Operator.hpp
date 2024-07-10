@@ -9,17 +9,17 @@ struct ScanOp {
     /// The next operator
     TNext* next;
     /// The input
-    vmcacheAdapter<TRecord>& adapter;
+    vmcacheAdapter<TRecord>* adapter;
     /// The scan function
     TFn scan;
 
     public:
     /// The constructor
-    ScanOp(TNext* next, vmcacheAdapter<TRecord>& adapter, TFn scan) : next(next), adapter(adapter), scan(scan) {}
+    ScanOp(TNext* next, vmcacheAdapter<TRecord>* adapter, TFn scan) : next(next), adapter(adapter), scan(scan) {}
 
     void process() {
         next->begin();
-        adapter.forEach([&](auto& key, auto& value) {
+        adapter->forEach([&](auto& key, auto& value) {
             scan(key, value);
             next->process();
         });

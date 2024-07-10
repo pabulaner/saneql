@@ -35,14 +35,18 @@ class CppIU {
     Type type;
     /// The name
     std::string name;
+    /// The ref
+    std::string ref;
 
     public:
     /// The constructor
-    CppIU(Type type, const std::string& name) : type(type), name(name) {}
+    CppIU(Type type, const std::string& name) : type(type), name(name), ref('&' + name) {}
     /// Get the type
     Type getType() const { return type; }
     /// Get the name
     const std::string& getName() const { return name; }
+    /// Get the ref
+    const std::string& getRef() const { return ref; }
 };
 
 class CppWriter {

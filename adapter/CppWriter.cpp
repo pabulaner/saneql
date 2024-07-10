@@ -56,6 +56,7 @@ void CppWriter::writeType(CppIU::Type type) {
         case CppIU::Type::Struct: writer += "struct"; break;
         case CppIU::Type::ScanOp: writer += "ScanOp"; break;
         case CppIU::Type::SelectOp: writer += "SelectOp"; break;
+        case CppIU::Type::MapOp: writer += "MapOp"; break;
         case CppIU::Type::OutputOp: writer += "OutputOp"; break;
     }
 }
