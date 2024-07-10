@@ -129,17 +129,6 @@ InExpression::InExpression(unique_ptr<Expression> probe, vector<unique_ptr<Expre
 {
 }
 //---------------------------------------------------------------------------
-std::vector<const IU*> InExpression::getIUs() const {
-   std::vector<const IU*> result = probe->getIUs();
-
-   for (auto& exp : values) {
-      std::vector<const IU*> ius = exp->getIUs();
-      result.insert(result.end(), ius.begin(), ius.end());
-   }
-
-   return result;
-}
-//---------------------------------------------------------------------------
 void InExpression::generate(CppWriter& out)
 // Generate SQL
 {
