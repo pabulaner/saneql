@@ -1,6 +1,6 @@
 #include "algebra/Operator.hpp"
 #include "sql/SQLWriter.hpp"
-#include "cpp/CppWriter.hpp"
+#include "adapter/CppWriter.hpp"
 //---------------------------------------------------------------------------
 // (c) 2023 Thomas Neumann
 //---------------------------------------------------------------------------
@@ -22,14 +22,17 @@ TableScan::TableScan(string name, vector<Column> columns)
 const CppIU* TableScan::generate(CppWriter& out, const CppIU* next)
 // Generate SQL
 {
-   auto type = adapter::CppIU::Type::ScanOp;
-   std::string nextParam = next->getName();
-   std::string dbParam = "db." + name;
+   auto type = CppIU::Type::ScanOp;
+   std::string nextParam = next->getRef();
+   std::string dbParam = "&(db->" + name + ")";
 
-   const adapter::CppIU* opIU = out.writeOperator(
+   const CppIU* opIU = out.writeOperator(
       type, {nextParam, dbParam},
       [&]() {  
-         out.writeln("[&](auto& key, auto& value) {");
+         std::string valueType = "const " + name + "_t";
+         std::string keyType = valueType + "::Key";
+
+         out.writeln("[&](" + keyType + "& key, " + valueType + "& value) {");
 
          for (auto& c : columns) {
             out.writeIU(c.iu.get());
@@ -54,10 +57,10 @@ Select::Select(unique_ptr<Operator> input, unique_ptr<Expression> condition)
 const CppIU* Select::generate(CppWriter& out, const CppIU* next)
 // Generate SQL
 {
-   auto type = adapter::CppIU::Type::SelectOp;
-   std::string nextParam = next->getName();
+   auto type = CppIU::Type::SelectOp;
+   std::string nextParam = next->getRef();
 
-   const adapter::CppIU* opIU = out.writeOperator(
+   const CppIU* opIU = out.writeOperator(
       type, {nextParam},
       [&]() {
          out.writeln("[&]() {");
@@ -80,7 +83,26 @@ Map::Map(unique_ptr<Operator> input, vector<Entry> computations)
 const CppIU* Map::generate(CppWriter& out, const CppIU* next)
 // Generate SQL
 {
-   
+   auto type = CppIU::Type::MapOp;
+   std::string nextRef = next->getRef();
+
+   const CppIU* opIU = out.writeOperator(
+      type, {nextRef},
+      [&]() {
+         out.writeln("[&]() {");
+
+         for (auto& c : computations) {
+            out.writeIU(c.iu.get());
+            out.write(" = ");
+            c.value->generate(out);
+            out.writeln(";");
+         }
+
+         out.write("}");
+      });
+
+   input->generate(out, opIU);
+   return opIU;
 }
 //---------------------------------------------------------------------------
 SetOperation::SetOperation(unique_ptr<Operator> left, unique_ptr<Operator> right, vector<unique_ptr<Expression>> leftColumns, vector<unique_ptr<Expression>> rightColumns, vector<unique_ptr<IU>> resultColumns, Op op)

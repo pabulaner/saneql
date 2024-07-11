@@ -1,2 +1,2 @@
-part
-.filter(p_partkey = 1)
+warehouse_t
+.filter(w_id = 1)

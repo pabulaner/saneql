@@ -1,7 +1,7 @@
 #include "algebra/Expression.hpp"
 #include "algebra/Operator.hpp"
 #include "sql/SQLWriter.hpp"
-#include "cpp/CppWriter.hpp"
+#include "adapter/CppWriter.hpp"
 #include <algorithm>
 #include <utility>
 //---------------------------------------------------------------------------
@@ -64,9 +64,7 @@ void ConstExpression::generate(CppWriter& out)
    } else {
       auto type = getType();
       if ((type.getType() != Type::Char) && (type.getType() != Type::Varchar) && (type.getType() != Type::Text)) {
-         out.write("(");
-         out.writeType(type);
-         out.write(") " + value);
+         out.write(value);
       } else {
          out.write("\"" + value + "\"");
       }

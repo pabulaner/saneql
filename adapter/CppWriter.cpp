@@ -42,8 +42,8 @@ void CppWriter::writeType(Type type) {
         case Type::Bool: writer += "bool"; break;
         case Type::Integer: writer += "int"; break;
         case Type::Decimal: writer += "double"; break;
-        case Type::Char: writer += "varchar<" + std::to_string(type.getLength()) + ">"; break;
-        case Type::Varchar: writer += "varchar<" + std::to_string(type.getLength()) + ">"; break;
+        case Type::Char: writer += "Varchar<" + std::to_string(type.getLength()) + ">"; break;
+        case Type::Varchar: writer += "Varchar<" + std::to_string(type.getLength()) + ">"; break;
         case Type::Text: writer += "text"; break;
         case Type::Date: writer += "date"; break;
         case Type::Interval: writer += "interval"; break;
@@ -56,6 +56,7 @@ void CppWriter::writeType(CppIU::Type type) {
         case CppIU::Type::Struct: writer += "struct"; break;
         case CppIU::Type::ScanOp: writer += "ScanOp"; break;
         case CppIU::Type::SelectOp: writer += "SelectOp"; break;
+        case CppIU::Type::MapOp: writer += "MapOp"; break;
         case CppIU::Type::OutputOp: writer += "OutputOp"; break;
     }
 }

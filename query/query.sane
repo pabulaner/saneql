@@ -1,1 +1,3 @@
 warehouse
+.filter(w_id = 1)
+.map({w_id2 := w_id * 2})
