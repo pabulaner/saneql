@@ -40,17 +40,14 @@ class Expression {
 
    /// Get the result type
    Type getType() const { return type; }
-   /// Get the expressions
-   virtual std::vector<Expression*> getExpressions() const { return {this}; }
+
+   /// Get the equi join property (default = false)
+   virtual bool equiJoinProperty() const { return false; }
 
    /// Generate SQL
    virtual void generate(CppWriter& out) = 0;
    /// Generate SQL in a form that is suitable as operand
    virtual void generateOperand(CppWriter& out);
-
-   protected:
-   /// Combine the expressions inside the first and second parameter
-   std::vector<Expression*> combineExpressions(const std::vector<std::unique_ptr<Expression>*>& first = {}, const std::vector<std::vector<std::unique_ptr<Expression>>*>& second = {}) const;
 };
 //---------------------------------------------------------------------------
 /// An IU reference
@@ -64,6 +61,9 @@ class IURef : public Expression {
 
    /// Get the IU
    const IU* getIU() const { return iu; }
+
+   /// Get the equi join property
+   bool equiJoinProperty() const override { return true; }
 
    /// Generate SQL
    void generate(CppWriter& out) override;
@@ -129,8 +129,8 @@ class ComparisonExpression : public Expression {
    /// Constructor
    ComparisonExpression(std::unique_ptr<Expression> left, std::unique_ptr<Expression> right, Mode mode, Collate collate);
 
-   /// Get the expressions
-   std::vector<Expression*> getExpressions() const override { return combineExpressions({&left, &right}); }
+   /// Get the equi join property
+   bool equiJoinProperty() const override { return mode == Mode::Equal && left->equiJoinProperty() && right->equiJoinProperty; }
 
    /// Generate SQL
    void generate(CppWriter& out) override;
