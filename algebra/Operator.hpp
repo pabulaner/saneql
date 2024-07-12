@@ -1,6 +1,7 @@
 #ifndef H_saneql_Operator
 #define H_saneql_Operator
 //---------------------------------------------------------------------------
+#include "adapter/Util.hpp"
 #include "algebra/Expression.hpp"
 #include "infra/Schema.hpp"
 #include <memory>
@@ -42,6 +43,8 @@ class Operator {
    /// Destructor
    virtual ~Operator();
 
+   // Get the IUs
+   virtual std::vector<const IU*> getIUs() const = 0;
    // Generate SQL
    virtual const CppIU* generate(CppWriter& out, const CppIU* next) = 0;
 };
@@ -69,6 +72,8 @@ class TableScan : public Operator {
    /// Constructor
    TableScan(std::string name, std::vector<Column> columns);
 
+   // Get the IUs
+   std::vector<const IU*> getIUs() const override { return util::map(columns, [](const Column& c) { return c.iu.get(); }); }
    // Generate SQL
    const CppIU* generate(CppWriter& out, const CppIU* next);
 };
@@ -84,6 +89,8 @@ class Select : public Operator {
    /// Constructor
    Select(std::unique_ptr<Operator> input, std::unique_ptr<Expression> condition);
 
+   // Get the IUs
+   std::vector<const IU*> getIUs() const override { return input->getIUs(); }
    // Generate SQL
    const CppIU* generate(CppWriter& out, const CppIU* next) override;
 };
@@ -103,6 +110,8 @@ class Map : public Operator {
    /// Constructor
    Map(std::unique_ptr<Operator> input, std::vector<Entry> computations);
 
+   // Get the IUs
+   std::vector<const IU*> getIUs() const override { return input->getIUs(); 
    // Generate SQL
    const CppIU* generate(CppWriter& out, const CppIU* next) override;
 };
@@ -165,6 +174,11 @@ class Join : public Operator {
    /// Constructor
    Join(std::unique_ptr<Operator> left, std::unique_ptr<Operator> right, std::unique_ptr<Expression> condition, JoinType joinType);
 
+   /// Get the join type
+   JoinType getJoinType() const { return joinType; }
+
+   // Get the IUs
+   std::vector<const IU*> getIUs() const override { return util::combine(left->getIUs, right->getIUs); }
    // Generate SQL
    const CppIU* generate(CppWriter& out, const CppIU* next) override;
 };

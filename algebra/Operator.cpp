@@ -126,7 +126,37 @@ Join::Join(unique_ptr<Operator> left, unique_ptr<Operator> right, unique_ptr<Exp
 const CppIU* Join::generate(CppWriter& out, const CppIU* next)
 // Generate SQL
 {
-   
+   auto type = CppIU::Type::JoinOp;
+
+   const CppIU* structIU = out.writeStruct(left->getIUs);
+   const CppIU* opIU = out.writeOperator(
+      type, {},
+      [&]() {
+         out.writeln("[&]() {");
+         out.write("return " + structIU->getName() + "{");
+
+         bool first = true;
+         for (auto iu : left->getIUs()) {
+            if (first) 
+               first = false;
+            else
+               out.write(", ");
+            out.write(iu->getName());
+         }
+
+         out.writeln("};");
+         out.writeln("}, [&](const " + structIU->getName() + "& row) {");
+
+         for (auto iu : left->getIUs()) {
+            out.writeln(iu->getName() + " = row." + iu->getName() + ";");
+         }
+
+         out.writeln("}, [&]() {");
+         out.write("return ");
+         condition->generate(out);
+         out.writeln(";");
+         out.write("}");
+      });
 }
 //---------------------------------------------------------------------------
 GroupBy::GroupBy(unique_ptr<Operator> input, vector<Entry> groupBy, vector<Aggregation> aggregates)

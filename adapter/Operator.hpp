@@ -4,18 +4,18 @@
 
 namespace adapter {
 
-template <typename TNext, typename TRecord, typename TFn>
+template <typename TNext, typename TRecord, typename TScanFn>
 struct ScanOp {
     /// The next operator
     TNext* next;
     /// The input
     vmcacheAdapter<TRecord>* adapter;
     /// The scan function
-    TFn scan;
+    TScanFn scan;
 
     public:
     /// The constructor
-    ScanOp(TNext* next, vmcacheAdapter<TRecord>* adapter, TFn scan) : next(next), adapter(adapter), scan(scan) {}
+    ScanOp(TNext* next, vmcacheAdapter<TRecord>* adapter, TScanFn scan) : next(next), adapter(adapter), scan(scan) {}
 
     void process() {
         next->begin();
@@ -27,14 +27,14 @@ struct ScanOp {
     }
 };
 
-template <typename TNext, typename TFn>
+template <typename TNext, typename TSelectFn>
 struct SelectOp {
     /// The next operator
     TNext* next;
     /// The select function
-    TFn select;
+    TSelectFn select;
 
-    SelectOp(TNext* next, TFn select) : next(next), select(select) {}
+    SelectOp(TNext* next, TSelectFn select) : next(next), select(select) {}
 
     void begin() { next->begin(); }
 
@@ -47,14 +47,14 @@ struct SelectOp {
     }
 };
 
-template <typename TNext, typename TFn>
+template <typename TNext, typename TMapFn>
 struct MapOp {
     /// The next operator
     TNext* next;
     /// The map function
-    TFn map;
+    TMapFn map;
 
-    MapOp(TNext* next, TFn map) : next(next), map(map) {}
+    MapOp(TNext* next, TMapFn map) : next(next), map(map) {}
 
     void begin() { next->begin(); }
 
@@ -66,12 +66,58 @@ struct MapOp {
     }
 };
 
-template <typename TFn>
+template <typename TRow, typename TNext, typename TGetFn, typename TSetFn, typename TConditionFn>
+struct JoinOp {
+    /// The next operator
+    TNext* next;
+    /// The add function
+    TGetFn get;
+    /// The set function
+    TSetFn set;
+    /// The condition function
+    TConditionFn condition;
+    /// Is first call
+    bool first;
+    /// The process function
+    void(process*)();
+    /// The rows
+    std::vector<TRow> rows;
+
+    JoinOp(TNext* next, TGetFn get, TSetFn set, TConditionFn condition) : next(next), get(get), set(set), condition(condition), first(true) {}
+
+    void begin() {
+        if (first) {
+            process = [&]() {
+                rows.push_back(get());
+            }
+        } else {
+            next->begin();
+            process = [&]() {
+                for (auto it = rows.begin(); it != rows.end(); it++) {
+                    set(*it);
+                    if (condition()) {
+                        next->process();
+                    }
+                }
+            }
+        }
+    }
+
+    void end() {
+        if (first) {
+            first = false;
+        } else {
+            next->end();
+        }
+    }
+};
+
+template <typename TOutputFn>
 struct OutputOp {
     /// The output function
-    TFn output;
+    TOutputFn output;
 
-    OutputOp(TFn output) : output(output) {}
+    OutputOp(TOutputFn output) : output(output) {}
 
     void begin() {}
 
