@@ -6,6 +6,7 @@
 #include "infra/Schema.hpp"
 #include <memory>
 #include <optional>
+#include <vector>
 //---------------------------------------------------------------------------
 // SaneQL
 // (c) 2023 Thomas Neumann
@@ -44,7 +45,7 @@ class Operator {
    virtual ~Operator();
 
    // Get the IUs
-   virtual std::vector<const IU*> getIUs() const = 0;
+   virtual std::vector<const IU*> getIUs() const { return {}; };
    // Generate SQL
    virtual const CppIU* generate(CppWriter& out, const CppIU* next) = 0;
 };
@@ -73,9 +74,9 @@ class TableScan : public Operator {
    TableScan(std::string name, std::vector<Column> columns);
 
    // Get the IUs
-   std::vector<const IU*> getIUs() const override { return util::map(columns, [](const Column& c) { return c.iu.get(); }); }
+   std::vector<const IU*> getIUs() const override { return util::map<const IU*>(columns, [](const Column& c) { return c.iu.get(); }); }
    // Generate SQL
-   const CppIU* generate(CppWriter& out, const CppIU* next);
+   const CppIU* generate(CppWriter& out, const CppIU* next) override;
 };
 //---------------------------------------------------------------------------
 /// A select operator
@@ -111,7 +112,7 @@ class Map : public Operator {
    Map(std::unique_ptr<Operator> input, std::vector<Entry> computations);
 
    // Get the IUs
-   std::vector<const IU*> getIUs() const override { return input->getIUs(); 
+   std::vector<const IU*> getIUs() const override { return input->getIUs(); }
    // Generate SQL
    const CppIU* generate(CppWriter& out, const CppIU* next) override;
 };
@@ -178,7 +179,7 @@ class Join : public Operator {
    JoinType getJoinType() const { return joinType; }
 
    // Get the IUs
-   std::vector<const IU*> getIUs() const override { return util::combine(left->getIUs, right->getIUs); }
+   std::vector<const IU*> getIUs() const override { return util::combine(left->getIUs(), right->getIUs()); }
    // Generate SQL
    const CppIU* generate(CppWriter& out, const CppIU* next) override;
 };

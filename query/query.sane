@@ -1,12 +1,5 @@
 warehouse
 .filter(w_id = 1)
 .map({w_id2 := w_id * 2})
+.join(district, d_w_id = w_id)
 
-JoinOp op(next, [&]() {
-    m_1.push_back({v_1, v_2, v_3});
-}, [&](const s_1& row) {
-    v_1 = row.v_1;
-    ...
-}, [&]() {
-    return v_1 == v_4;
-});

@@ -23,7 +23,6 @@ class CppIU {
     public:
     enum Type {
         Struct,
-        UnorderedMap,
         ScanOp,
         SelectOp,
         MapOp,
@@ -85,10 +84,12 @@ class CppWriter {
     /// Write cpp type
     void writeType(CppIU::Type type);
     /// Write struct to structResult
-    const CppIU* writeStruct(const std::vector<const CppIU*>& fields);
+    const CppIU* writeStruct(const std::vector<const IU*>& fields);
     /// Write operator to operatorResult
     const CppIU* writeOperator(CppIU::Type type, const std::vector<std::string>& params, const std::function<void()> lambda);
-    /// Write begin
+    /// Write template operator to operatorResult
+    const CppIU* writeTemplateOperator(CppIU::Type type, const std::vector<std::string>& templates, const std::vector<std::string>& params, const std::function<void()> lambda);
+    /// Write process
     void writeProcess(const CppIU* opIU);
     /// Write IU to operatorResult and declare it in iuResult
     void writeIU(const IU* iu);

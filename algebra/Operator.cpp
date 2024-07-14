@@ -84,10 +84,10 @@ const CppIU* Map::generate(CppWriter& out, const CppIU* next)
 // Generate SQL
 {
    auto type = CppIU::Type::MapOp;
-   std::string nextRef = next->getRef();
+   std::string nextParam = next->getRef();
 
    const CppIU* opIU = out.writeOperator(
-      type, {nextRef},
+      type, {nextParam},
       [&]() {
          out.writeln("[&]() {");
 
@@ -114,7 +114,7 @@ SetOperation::SetOperation(unique_ptr<Operator> left, unique_ptr<Operator> right
 const CppIU* SetOperation::generate(CppWriter& out, const CppIU* next)
 // Generate SQL
 {
-   
+   return nullptr;
 }
 //---------------------------------------------------------------------------
 Join::Join(unique_ptr<Operator> left, unique_ptr<Operator> right, unique_ptr<Expression> condition, JoinType joinType)
@@ -126,11 +126,14 @@ Join::Join(unique_ptr<Operator> left, unique_ptr<Operator> right, unique_ptr<Exp
 const CppIU* Join::generate(CppWriter& out, const CppIU* next)
 // Generate SQL
 {
-   auto type = CppIU::Type::JoinOp;
+   const CppIU* structIU = out.writeStruct(left->getIUs());
 
-   const CppIU* structIU = out.writeStruct(left->getIUs);
+   auto type = CppIU::Type::JoinOp;
+   std::string nextParam = next->getRef();
+   std::string structParam = structIU->getName() + "{}";
+
    const CppIU* opIU = out.writeOperator(
-      type, {},
+      type, {nextParam, structParam},
       [&]() {
          out.writeln("[&]() {");
          out.write("return " + structIU->getName() + "{");
@@ -141,14 +144,17 @@ const CppIU* Join::generate(CppWriter& out, const CppIU* next)
                first = false;
             else
                out.write(", ");
-            out.write(iu->getName());
+            out.writeIU(iu);
          }
 
          out.writeln("};");
          out.writeln("}, [&](const " + structIU->getName() + "& row) {");
 
          for (auto iu : left->getIUs()) {
-            out.writeln(iu->getName() + " = row." + iu->getName() + ";");
+            out.writeIU(iu);
+            out.write(" = row.");
+            out.writeIU(iu);
+            out.writeln(";");
          }
 
          out.writeln("}, [&]() {");
@@ -157,6 +163,11 @@ const CppIU* Join::generate(CppWriter& out, const CppIU* next)
          out.writeln(";");
          out.write("}");
       });
+
+   left->generate(out, opIU);
+   right->generate(out, opIU);
+
+   return opIU;
 }
 //---------------------------------------------------------------------------
 GroupBy::GroupBy(unique_ptr<Operator> input, vector<Entry> groupBy, vector<Aggregation> aggregates)
@@ -168,7 +179,7 @@ GroupBy::GroupBy(unique_ptr<Operator> input, vector<Entry> groupBy, vector<Aggre
 const CppIU* GroupBy::generate(CppWriter& out, const CppIU* next)
 // Generate SQL
 {
-   
+   return nullptr;
 }
 //---------------------------------------------------------------------------
 Sort::Sort(unique_ptr<Operator> input, vector<Entry> order, optional<uint64_t> limit, optional<uint64_t> offset)
@@ -180,7 +191,7 @@ Sort::Sort(unique_ptr<Operator> input, vector<Entry> order, optional<uint64_t> l
 const CppIU* Sort::generate(CppWriter& out, const CppIU* next)
 // Generate SQL
 {
-   
+   return nullptr;
 }
 //---------------------------------------------------------------------------
 Window::Window(unique_ptr<Operator> input, vector<Aggregation> aggregates, vector<unique_ptr<Expression>> partitionBy, vector<Sort::Entry> orderBy)
@@ -192,7 +203,7 @@ Window::Window(unique_ptr<Operator> input, vector<Aggregation> aggregates, vecto
 const CppIU* Window::generate(CppWriter& out, const CppIU* next)
 // Generate SQL
 {
-   
+   return nullptr;
 }
 //---------------------------------------------------------------------------
 InlineTable::InlineTable(vector<unique_ptr<algebra::IU>> columns, vector<unique_ptr<algebra::Expression>> values, unsigned rowCount)
@@ -204,7 +215,7 @@ InlineTable::InlineTable(vector<unique_ptr<algebra::IU>> columns, vector<unique_
 const CppIU* InlineTable::generate(CppWriter& out, const CppIU* next)
 // Generate SQL
 {
-   
+   return nullptr;
 }
 //---------------------------------------------------------------------------
 }
