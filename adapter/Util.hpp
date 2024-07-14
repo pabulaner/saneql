@@ -6,7 +6,7 @@ namespace adapter {
 
 namespace util {
 
-template <typename TIn, typename TOut, typename TMapFn>
+template <typename TOut, typename TIn, typename TMapFn>
 std::vector<TOut> map(const std::vector<TIn>& in, TMapFn map) {
     std::vector<TOut> result;
     for (auto it = in.begin(); it != in.end(); it++) {

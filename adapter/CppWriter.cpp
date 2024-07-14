@@ -30,47 +30,53 @@ void CppWriter::writeln(const std::string& content) {
 
 void CppWriter::writeTabs() const {
     auto& writer = *(targetStack.top());
+    if (&writer == &iuResult) {
+        return;
+    }
     for (std::size_t i = 0; i < tabCount; i++) {
         writer += '\t';
     }
 }
 
 void CppWriter::writeType(Type type) {
-    auto& writer = *(targetStack.top());
     switch (type.getType()) {
-        case Type::Unknown: writer += "auto"; break; // this can only happen for NULL values
-        case Type::Bool: writer += "bool"; break;
-        case Type::Integer: writer += "int"; break;
-        case Type::Decimal: writer += "double"; break;
-        case Type::Char: writer += "Varchar<" + std::to_string(type.getLength()) + ">"; break;
-        case Type::Varchar: writer += "Varchar<" + std::to_string(type.getLength()) + ">"; break;
-        case Type::Text: writer += "text"; break;
-        case Type::Date: writer += "date"; break;
-        case Type::Interval: writer += "interval"; break;
+        case Type::Unknown: write("auto"); break; // this can only happen for NULL values
+        case Type::Bool: write("bool"); break;
+        case Type::Integer: write("int"); break;
+        case Type::Decimal: write("double"); break;
+        case Type::Char: write("Varchar<" + std::to_string(type.getLength()) + ">"); break;
+        case Type::Varchar: write("Varchar<" + std::to_string(type.getLength()) + ">"); break;
+        case Type::Text: write("text"); break;
+        case Type::Date: write("date"); break;
+        case Type::Interval: write("interval"); break;
     }
 }
 
 void CppWriter::writeType(CppIU::Type type) {
-    auto& writer = *(targetStack.top());
+    using enum CppIU::Type;
+    
     switch (type) {
-        case CppIU::Type::Struct: writer += "struct"; break;
-        case CppIU::Type::ScanOp: writer += "ScanOp"; break;
-        case CppIU::Type::SelectOp: writer += "SelectOp"; break;
-        case CppIU::Type::MapOp: writer += "MapOp"; break;
-        case CppIU::Type::OutputOp: writer += "OutputOp"; break;
+        case Struct: write("struct"); break;
+        case ScanOp: write("ScanOp"); break;
+        case SelectOp: write("SelectOp"); break;
+        case MapOp: write("MapOp"); break;
+        case JoinOp: write("JoinOp"); break;
+        case OutputOp: write("OutputOp"); break;
     }
 }
 
-const CppIU* CppWriter::writeStruct(const std::vector<const CppIU*>& fields) {
+const CppIU* CppWriter::writeStruct(const std::vector<const IU*>& fields) {
     saveTarget(&structResult);
     const CppIU* iu = createCppIU(CppIU::Type::Struct);
 
     writeType(iu->getType());
     writeln(" " + iu->getName() + " {");
 
-    for (auto& field : fields) {
+    for (auto field : fields) {
         writeType(field->getType());
-        writeln(" " + field->getName() + ";");
+        write(" ");
+        writeIU(field);
+        writeln(";");
     }   
 
     writeln("};");
@@ -80,20 +86,39 @@ const CppIU* CppWriter::writeStruct(const std::vector<const CppIU*>& fields) {
 }
 
 const CppIU* CppWriter::writeOperator(CppIU::Type type, const std::vector<std::string>& params, std::function<void()> lambda) {
+    return writeTemplateOperator(type, {}, params, lambda);
+}
+
+const CppIU* CppWriter::writeTemplateOperator(CppIU::Type type, const std::vector<std::string>& templates, const std::vector<std::string>& params, const std::function<void()> lambda) {
     saveTarget(&operatorResult);
     const CppIU* iu = createCppIU(type);
 
     writeType(type);
-    write(" " + iu->getName() + "(");
+
+    if (templates.size() > 0)
+        write("<");
 
     bool first = true;
-    for (auto& param : params) {
+    for (auto& t : templates) {
         if (first) 
             first = false;
         else
             write(", ");
+        write(t);
+    }
 
-        write(param);
+    if (templates.size() > 0)
+        write(">");
+
+    write(" " + iu->getName() + "(");
+
+    first = true;
+    for (auto& p : params) {
+        if (first) 
+            first = false;
+        else
+            write(", ");
+        write(p);
     }
 
     if (!first) 
@@ -115,8 +140,6 @@ void CppWriter::writeProcess(const CppIU* opIU) {
 }
 
 void CppWriter::writeIU(const IU* iu) {
-    saveTarget(&operatorResult);
-
     if (auto iter = iuNames.find(iu); iter != iuNames.end()) {
         write(iter->second);
     } else {
@@ -130,8 +153,6 @@ void CppWriter::writeIU(const IU* iu) {
 
         iuNames[iu] = move(name);
     }
-
-    restoreTarget();
 }
 
 std::string CppWriter::getResult() const {

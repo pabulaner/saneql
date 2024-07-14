@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 #include "vmcache/vmcache.hpp"
 
 namespace adapter {
@@ -66,7 +68,7 @@ struct MapOp {
     }
 };
 
-template <typename TRow, typename TNext, typename TGetFn, typename TSetFn, typename TConditionFn>
+template <typename TNext, typename TRow, typename TGetFn, typename TSetFn, typename TConditionFn>
 struct JoinOp {
     /// The next operator
     TNext* next;
@@ -79,17 +81,17 @@ struct JoinOp {
     /// Is first call
     bool first;
     /// The process function
-    void(process*)();
+    std::function<void()> process;
     /// The rows
     std::vector<TRow> rows;
 
-    JoinOp(TNext* next, TGetFn get, TSetFn set, TConditionFn condition) : next(next), get(get), set(set), condition(condition), first(true) {}
+    JoinOp(TNext* next, TRow row, TGetFn get, TSetFn set, TConditionFn condition) : next(next), get(get), set(set), condition(condition), first(true) {}
 
     void begin() {
         if (first) {
             process = [&]() {
                 rows.push_back(get());
-            }
+            };
         } else {
             next->begin();
             process = [&]() {
@@ -99,7 +101,7 @@ struct JoinOp {
                         next->process();
                     }
                 }
-            }
+            };
         }
     }
 

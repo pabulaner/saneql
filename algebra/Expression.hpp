@@ -130,7 +130,7 @@ class ComparisonExpression : public Expression {
    ComparisonExpression(std::unique_ptr<Expression> left, std::unique_ptr<Expression> right, Mode mode, Collate collate);
 
    /// Get the equi join property
-   bool equiJoinProperty() const override { return mode == Mode::Equal && left->equiJoinProperty() && right->equiJoinProperty; }
+   bool equiJoinProperty() const override { return mode == Mode::Equal && left->equiJoinProperty() && right->equiJoinProperty(); }
 
    /// Generate SQL
    void generate(CppWriter& out) override;
@@ -194,9 +194,6 @@ class BinaryExpression : public Expression {
    /// Constructor
    BinaryExpression(std::unique_ptr<Expression> left, std::unique_ptr<Expression> right, Type resultType, Operation op);
 
-   /// Get the expressions
-   std::vector<Expression*> getExpressions() const override { return combineExpressions({&left, &right}); }
-
    /// Generate SQL
    void generate(CppWriter& out) override;
 };
@@ -218,9 +215,6 @@ class UnaryExpression : public Expression {
    public:
    /// Constructor
    UnaryExpression(std::unique_ptr<Expression> input, Type resultType, Operation op);
-
-   /// Get the expressions
-   std::vector<Expression*> getExpressions() const override { return {combineExpressions({&input})}; }
 
    /// Generate SQL
    void generate(CppWriter& out) override;

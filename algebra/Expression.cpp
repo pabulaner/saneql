@@ -24,26 +24,6 @@ void Expression::generateOperand(CppWriter& out)
    out.write(")");
 }
 //---------------------------------------------------------------------------
-std::vector<Expression*> Expression::combineExpressions(const std::vector<std::unique_ptr<Expression>*>& first, const std::vector<std::vector<std::unique_ptr<Expression>>*>& second) const {
-// Combine IUs of provided expressions
-{
-   std::vector<Expression*> result;
-   result.push_back(this);
-
-   for (auto& e : first) {
-      auto res = (*e)->getExpressions();
-      result.insert(result.end(), res.begin(), res.end());
-   }
-   for (auto v : second) {
-      for (auto& e : *v) {
-         auto res = e->getExpressions();
-         result.insert(result.end(), res.begin(), res.end());
-      }
-   }
-
-   return result;
-}
-//---------------------------------------------------------------------------
 IURef::IURef(const IU* iu)
    : Expression(iu->getType()), iu(iu)
 // Constructor
