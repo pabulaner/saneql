@@ -1,5 +1,8 @@
 #pragma once
 
+#include <vector>
+#include <unordered_map>
+
 #include "vmcache/vmcache.hpp"
 
 namespace adapter {
@@ -93,8 +96,8 @@ struct JoinOp {
         } else {
             next->begin();
             process = [&]() {
-                for (auto it = rows.begin(); it != rows.end(); it++) {
-                    set(*it);
+                for (auto& row : rows) {
+                    set(row);
                     if (condition()) {
                         next->process();
                     }
@@ -109,6 +112,41 @@ struct JoinOp {
         } else {
             next->end();
         }
+    }
+};
+
+template <typename TNext, typename TKey, typename TValue, typename TGetFn, typename TGroupByFn, typename TSetFn>
+struct GroupByOp {
+    /// The next operator
+    TNext* next;
+    /// The get function
+    TGetFn get;
+    /// The group by function
+    TGroupByFn groupBy;
+    /// The set function
+    TSetFn set;
+    /// The group by map
+    std::unordered_map<TKey, TValue> rows;
+
+    GroupByOp(TNext* next, TKey key, TValue value, TGetFn get, TGroupByFn groupBy, TSetFn set);
+
+    void begin() {}
+
+    void end() {
+        next->begin();
+        for (auto& keyValue : rows) {
+            set(keyValue.first(), keyValue.second());
+            next->process();
+        }
+        next->end();
+    }
+
+    void process() {
+        TKey key = get();
+        if (!rows.contains(key)) {
+            rows[key] = {};
+        }
+        groupBy(key, rows[key]);
     }
 };
 
