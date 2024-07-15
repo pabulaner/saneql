@@ -148,7 +148,7 @@ const CppIU* Join::generate(CppWriter& out, const CppIU* next)
          }
 
          out.writeln("};");
-         out.writeln("}, [&](const " + structIU->getName() + "& row) {");
+         out.writeln("}, [&](const " + structIU->getRef() + " row) {");
 
          for (auto iu : left->getIUs()) {
             out.writeIU(iu);
@@ -179,7 +179,82 @@ GroupBy::GroupBy(unique_ptr<Operator> input, vector<Entry> groupBy, vector<Aggre
 const CppIU* GroupBy::generate(CppWriter& out, const CppIU* next)
 // Generate SQL
 {
-   return nullptr;
+   std::vector<const IU*> keyStructIUs = util::map<const IU*>(groupBy, [](const Entry& e) { return e.iu.get(); });
+   std::vector<const IU*> valueStructIUs = util::map<const IU*>(aggregates, [](const Aggregation& a) { return a.iu.get(); });
+   std::unordered_map<const IU*, std::unique_ptr<IU>> avgCountIUs;
+
+   for (auto& a : aggregates) {
+      if (a.op == Op::Avg) {
+         avgCountIUs[a.iu.get()] = std::make_unique<IU>(Type::getInteger());
+         valueStructIUs.push_back(avgCountIUs[a.iu.get()].get());
+      }
+   }
+
+
+   const CppIU* keyStructIU = out.writeStruct(keyStructIUs);
+   const CppIU* valueStructIU = out.writeStruct(valueStructIUs);
+
+   auto type = CppIU::Type::GroupByOp;
+   std::string nextParam = next->getRef();
+   std::string keyStructParam = keyStructIU->getName();
+   std::string valueStructParam = valueStructIU->getName();
+
+   const CppIU* opIU = out.writeOperator(
+      type, {nextParam, keyStructParam, valueStructParam},
+      [&]() {
+         out.writeln("[&]() {");
+         out.write("return " + keyStructIU->getName() + "{");
+
+         bool first = true;
+         for (auto iu : keyStructIUs) {
+            if (first) 
+               first = false;
+            else
+               out.write(", ");
+            out.writeIU(iu);
+         }
+
+         out.writeln("};");
+         out.writeln("}, [&](const " + valueStructIU->getRef() + " value) {");
+
+         for (auto& a : aggregates) {
+            out.write("value.");
+            out.writeIU(a.iu.get());
+            switch (a.op) {
+               case Op::Count: out.write(" += 1"); break;
+               case Op::Sum: out.write(" += "); a.value->generate(out);  break;
+               // case Op::Avg: out.write(" += "); a.value->generate(out); break;
+            }
+            out.writeln(";");
+         }
+
+         out.writeln("}, [&](const " + keyStructIU->getRef() + " key, const " + valueStructIU->getRef() + " value) {");
+
+         for (auto iu : keyStructIUs) {
+            out.writeIU(iu);
+            out.write(" = key.");
+            out.writeIU(iu);
+            out.writeln(";");
+         }
+         for (auto& a : aggregates) {
+            out.writeIU(a.iu.get());
+            out.write(" = value.");
+            out.writeIU(a.iu.get());
+            
+            if (a.op == Op::Avg) {
+               const IU* iu = avgCountIUs[a.iu.get()].get();
+               out.write(" / (double) value.");
+               out.writeIU(iu);
+            }
+
+            out.writeln(";");
+         }
+
+         out.write("}");
+      });
+
+   input->generate(out, opIU);
+   return opIU;
 }
 //---------------------------------------------------------------------------
 Sort::Sort(unique_ptr<Operator> input, vector<Entry> order, optional<uint64_t> limit, optional<uint64_t> offset)

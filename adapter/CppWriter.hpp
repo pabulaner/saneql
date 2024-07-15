@@ -27,6 +27,7 @@ class CppIU {
         SelectOp,
         MapOp,
         JoinOp,
+        GroupByOp,
         OutputOp
     };
 
