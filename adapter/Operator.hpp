@@ -70,7 +70,7 @@ struct MapOp {
     }
 };
 
-template <typename TNext, typename TRow, typename TGetFn, typename TSetFn, typename TConditionFn>
+template <typename TNext, typename TRow, typename TGetFn, typename TSetFn, typename TJoinFn>
 struct JoinOp {
     /// The next operator
     TNext* next;
@@ -78,8 +78,8 @@ struct JoinOp {
     TGetFn get;
     /// The set function
     TSetFn set;
-    /// The condition function
-    TConditionFn condition;
+    /// The join function
+    TJoinFn join;
     /// Is first call
     bool first;
     /// The process function
@@ -87,7 +87,7 @@ struct JoinOp {
     /// The rows
     std::vector<TRow> rows;
 
-    JoinOp(TNext* next, TRow row, TGetFn get, TSetFn set, TConditionFn condition) : next(next), get(get), set(set), condition(condition), first(true) {}
+    JoinOp(TNext* next, TRow row, TGetFn get, TSetFn set, TJoinFn join) : next(next), get(get), set(set), join(join), first(true) {}
 
     void begin() {
         if (first) {
@@ -99,7 +99,7 @@ struct JoinOp {
             process = [&]() {
                 for (auto& row : rows) {
                     set(row);
-                    if (condition()) {
+                    if (join()) {
                         next->process();
                     }
                 }
@@ -116,7 +116,7 @@ struct JoinOp {
     }
 };
 
-template <typename TNext, typename TKey, typename TValue, typename TGetFn, typename TGroupByFn, typename TSetFn>
+template <typename TNext, typename TKey, typename TValue, typename TGetFn, typename TSetFn, typename TGroupByFn>
 struct GroupByOp {
     /// The next operator
     TNext* next;
@@ -129,7 +129,7 @@ struct GroupByOp {
     /// The group by map
     std::unordered_map<TKey, TValue> rows;
 
-    GroupByOp(TNext* next, TKey key, TValue value, TGetFn get, TGroupByFn groupBy, TSetFn set);
+    GroupByOp(TNext* next, TKey key, TValue value, TGetFn get, TSetFn set, TGroupByFn groupBy);
 
     void begin() {}
 
@@ -148,6 +148,40 @@ struct GroupByOp {
             rows[key] = {};
         }
         groupBy(key, rows[key]);
+    }
+};
+
+template <typename TNext, typename TRow, typename TGetFn, typename TSetFn, typename TSortFn>
+struct SortOp {
+    /// The next operator
+    TNext* next;
+    /// The get function
+    TGetFn get;
+    /// The set function
+    TSetFn set;
+    /// The order by function
+    TSortFn sort;
+    /// The rows
+    std::vector<TRow> rows;
+
+public:
+    SortOp(TNext* next, TRow row, TGetFn get, TSetFn set, TSortFn sort) : next(next), get(get), set(set), sort(sort) {}
+
+    void begin() {}
+
+    void end() {
+        std::sort(rows.begin(), rows.end(), sort);
+
+        next->begin();
+        for (auto& row : rows) {
+            set(row);
+            next->process();
+        }
+        next->end();
+    }
+
+    void process() {
+        rows.push_back(get());
     }
 };
 
