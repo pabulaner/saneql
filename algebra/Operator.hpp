@@ -198,6 +198,8 @@ class GroupBy : public Operator, public AggregationLike {
    /// Constructor
    GroupBy(std::unique_ptr<Operator> input, std::vector<Entry> groupBy, std::vector<Aggregation> aggregates);
 
+   // Get the IUs
+   std::vector<const IU*> getIUs() const override { return util::combine(left->getIUs(), right->getIUs()); }
    // Generate SQL
    const CppIU* generate(CppWriter& out, const CppIU* next) override;
 };
