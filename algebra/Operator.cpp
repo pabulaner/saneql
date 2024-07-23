@@ -19,33 +19,14 @@ TableScan::TableScan(string name, vector<Column> columns)
 {
 }
 //---------------------------------------------------------------------------
-const CppIU* TableScan::generate(CppWriter& out, const CppIU* next)
+std::unique_ptr<p2c::Operator> TableScan::generate(IUStorage& s)
 // Generate SQL
 {
-   auto type = CppIU::Type::ScanOp;
-   std::string nextParam = next->getRef();
-   std::string dbParam = "&(db->" + name + ")";
-
-   const CppIU* opIU = out.writeOperator(
-      type, {nextParam, dbParam},
-      [&]() {  
-         std::string valueType = "const " + name + "_t";
-         std::string keyType = valueType + "::Key";
-
-         out.writeln("[&](" + keyType + "& key, " + valueType + "& value) {");
-
-         for (auto& c : columns) {
-            out.writeIU(c.iu.get());
-            out.write(" = ");
-            out.write(c.isKey ? "key" : "value");
-            out.writeln("." + c.name + ";");
-         }
-         
-         out.write("}");
-      });
-
-   out.writeProcess(opIU);
-   return opIU;
+   auto op = std::make_unique<p2c::Scan>(name);
+   for (auto& c : columns) {
+      s.add(c.iu.get(), op->getIU(c.name));
+   }
+   return op;
 }
 //---------------------------------------------------------------------------
 Select::Select(unique_ptr<Operator> input, unique_ptr<Expression> condition)
@@ -54,24 +35,10 @@ Select::Select(unique_ptr<Operator> input, unique_ptr<Expression> condition)
 {
 }
 //---------------------------------------------------------------------------
-const CppIU* Select::generate(CppWriter& out, const CppIU* next)
+std::unique_ptr<p2c::Operator> Select::generate(IUStorage& s)
 // Generate SQL
 {
-   auto type = CppIU::Type::SelectOp;
-   std::string nextParam = next->getRef();
-
-   const CppIU* opIU = out.writeOperator(
-      type, {nextParam},
-      [&]() {
-         out.writeln("[&]() {");
-         out.write("return ");
-         condition->generate(out);
-         out.writeln(";");
-         out.write("}");
-      });
-
-   input->generate(out, opIU);
-   return opIU;
+   return std::make_unique<p2c::Selection>(input->generate(s), condition->generate(s));
 }
 //---------------------------------------------------------------------------
 Map::Map(unique_ptr<Operator> input, vector<Entry> computations)
@@ -80,29 +47,16 @@ Map::Map(unique_ptr<Operator> input, vector<Entry> computations)
 {
 }
 //---------------------------------------------------------------------------
-const CppIU* Map::generate(CppWriter& out, const CppIU* next)
+std::unique_ptr<pc2::Operator> Map::generate(IUStorage& s)
 // Generate SQL
 {
-   auto type = CppIU::Type::MapOp;
-   std::string nextParam = next->getRef();
-
-   const CppIU* opIU = out.writeOperator(
-      type, {nextParam},
-      [&]() {
-         out.writeln("[&]() {");
-
-         for (auto& c : computations) {
-            out.writeIU(c.iu.get());
-            out.write(" = ");
-            c.value->generate(out);
-            out.writeln(";");
-         }
-
-         out.write("}");
-      });
-
-   input->generate(out, opIU);
-   return opIU;
+   auto op = input->generate(s);
+   for (auto& c : computations) {
+      auto mapOp = std::make_unique<p2c::Map>(std::move(op), c.value->generate(s));
+      s.add(c.iu.get(), mapOp->getIU());
+      op = std::move(mapOp);
+   }
+   return op;
 }
 //---------------------------------------------------------------------------
 SetOperation::SetOperation(unique_ptr<Operator> left, unique_ptr<Operator> right, vector<unique_ptr<Expression>> leftColumns, vector<unique_ptr<Expression>> rightColumns, vector<unique_ptr<IU>> resultColumns, Op op)
@@ -111,7 +65,7 @@ SetOperation::SetOperation(unique_ptr<Operator> left, unique_ptr<Operator> right
 {
 }
 //---------------------------------------------------------------------------
-const CppIU* SetOperation::generate(CppWriter& out, const CppIU* next)
+std::unique_ptr<pc2::Operator> SetOperation::generate(IUStorage& s)
 // Generate SQL
 {
    return nullptr;
@@ -123,51 +77,29 @@ Join::Join(unique_ptr<Operator> left, unique_ptr<Operator> right, unique_ptr<Exp
 {
 }
 //---------------------------------------------------------------------------
-const CppIU* Join::generate(CppWriter& out, const CppIU* next)
+std::unique_ptr<pc2::Operator> Join::generate(IUStorage& s)
 // Generate SQL
 {
-   const CppIU* structIU = out.writeStruct(left->getIUs());
+   if (!condition->equiJoinProperty()) {
+      throw;
+   }
 
-   auto type = CppIU::Type::JoinOp;
-   std::string nextParam = next->getRef();
-   std::string structParam = structIU->getName() + "{}";
+   std::vector<const IU*> ius = condition->getIUs();
+   std::vector<const p2c::IU*> leftKeyIUs;
+   std::vector<const p2c::IU*> rightKeyIUs;
 
-   const CppIU* opIU = out.writeOperator(
-      type, {nextParam, structParam},
-      [&]() {
-         out.writeln("[&]() {");
-         out.write("return " + structIU->getName() + "{");
+   for (auto iu : left->getIUs()) {
+      if (std::find(ius.begin(), ius.end(), iu) != ius.end()) {
+         leftKeyIUs.push_back(s.get(iu));
+      }
+   }
+   for (auto iu : right->getIUs()) {
+      if (std::find(ius.begin(), ius.end(), iu) != ius.end()) {
+         rightKeyIUs.push_back(s.get(iu));
+      }
+   }
 
-         bool first = true;
-         for (auto iu : left->getIUs()) {
-            if (first) 
-               first = false;
-            else
-               out.write(", ");
-            out.writeIU(iu);
-         }
-
-         out.writeln("};");
-         out.writeln("}, [&](const " + structIU->getRef() + " row) {");
-
-         for (auto iu : left->getIUs()) {
-            out.writeIU(iu);
-            out.write(" = row.");
-            out.writeIU(iu);
-            out.writeln(";");
-         }
-
-         out.writeln("}, [&]() {");
-         out.write("return ");
-         condition->generate(out);
-         out.writeln(";");
-         out.write("}");
-      });
-
-   left->generate(out, opIU);
-   right->generate(out, opIU);
-
-   return opIU;
+   return std::make_unique<p2c::HashJoin>(left->generate(s), right->generate(s), leftKeyIUs, rightKeyIUs);
 }
 //---------------------------------------------------------------------------
 GroupBy::GroupBy(unique_ptr<Operator> input, vector<Entry> groupBy, vector<Aggregation> aggregates)
@@ -176,85 +108,10 @@ GroupBy::GroupBy(unique_ptr<Operator> input, vector<Entry> groupBy, vector<Aggre
 {
 }
 //---------------------------------------------------------------------------
-const CppIU* GroupBy::generate(CppWriter& out, const CppIU* next)
+std::unique_ptr<pc2::Operator> GroupBy::generate(IUStorage& s)
 // Generate SQL
 {
-   std::vector<const IU*> keyStructIUs = util::map<const IU*>(groupBy, [](const Entry& e) { return e.iu.get(); });
-   std::vector<const IU*> valueStructIUs = util::map<const IU*>(aggregates, [](const Aggregation& a) { return a.iu.get(); });
-   std::unordered_map<const IU*, std::unique_ptr<IU>> avgCountIUs;
-
-   for (auto& a : aggregates) {
-      if (a.op == Op::Avg) {
-         avgCountIUs[a.iu.get()] = std::make_unique<IU>(Type::getInteger());
-         valueStructIUs.push_back(avgCountIUs[a.iu.get()].get());
-      }
-   }
-
-
-   const CppIU* keyStructIU = out.writeStruct(keyStructIUs);
-   const CppIU* valueStructIU = out.writeStruct(valueStructIUs);
-
-   auto type = CppIU::Type::GroupByOp;
-   std::string nextParam = next->getRef();
-   std::string keyStructParam = keyStructIU->getName();
-   std::string valueStructParam = valueStructIU->getName();
-
-   const CppIU* opIU = out.writeOperator(
-      type, {nextParam, keyStructParam, valueStructParam},
-      [&]() {
-         out.writeln("[&]() {");
-         out.write("return " + keyStructIU->getName() + "{");
-
-         bool first = true;
-         for (auto iu : keyStructIUs) {
-            if (first) 
-               first = false;
-            else
-               out.write(", ");
-            out.writeIU(iu);
-         }
-
-         out.writeln("};");
-         out.writeln("}, [&](const " + valueStructIU->getRef() + " value) {");
-
-         for (auto& a : aggregates) {
-            out.write("value.");
-            out.writeIU(a.iu.get());
-            switch (a.op) {
-               case Op::Count: out.write(" += 1"); break;
-               case Op::Sum: out.write(" += "); a.value->generate(out);  break;
-               // case Op::Avg: out.write(" += "); a.value->generate(out); break;
-            }
-            out.writeln(";");
-         }
-
-         out.writeln("}, [&](const " + keyStructIU->getRef() + " key, const " + valueStructIU->getRef() + " value) {");
-
-         for (auto iu : keyStructIUs) {
-            out.writeIU(iu);
-            out.write(" = key.");
-            out.writeIU(iu);
-            out.writeln(";");
-         }
-         for (auto& a : aggregates) {
-            out.writeIU(a.iu.get());
-            out.write(" = value.");
-            out.writeIU(a.iu.get());
-            
-            if (a.op == Op::Avg) {
-               const IU* iu = avgCountIUs[a.iu.get()].get();
-               out.write(" / (double) value.");
-               out.writeIU(iu);
-            }
-
-            out.writeln(";");
-         }
-
-         out.write("}");
-      });
-
-   input->generate(out, opIU);
-   return opIU;
+   return nullptr;
 }
 //---------------------------------------------------------------------------
 Sort::Sort(unique_ptr<Operator> input, vector<Entry> order, optional<uint64_t> limit, optional<uint64_t> offset)
@@ -263,7 +120,7 @@ Sort::Sort(unique_ptr<Operator> input, vector<Entry> order, optional<uint64_t> l
 {
 }
 //---------------------------------------------------------------------------
-const CppIU* Sort::generate(CppWriter& out, const CppIU* next)
+std::unique_ptr<pc2::Operator> Sort::generate(IUStorage& s)
 // Generate SQL
 {
    return nullptr;
@@ -275,7 +132,7 @@ Window::Window(unique_ptr<Operator> input, vector<Aggregation> aggregates, vecto
 {
 }
 //---------------------------------------------------------------------------
-const CppIU* Window::generate(CppWriter& out, const CppIU* next)
+std::unique_ptr<pc2::Operator> Window::generate(IUStorage& s)
 // Generate SQL
 {
    return nullptr;
@@ -287,7 +144,7 @@ InlineTable::InlineTable(vector<unique_ptr<algebra::IU>> columns, vector<unique_
 {
 }
 //---------------------------------------------------------------------------
-const CppIU* InlineTable::generate(CppWriter& out, const CppIU* next)
+std::unique_ptr<pc2::Operator> InlineTable::generate(IUStorage& s)
 // Generate SQL
 {
    return nullptr;

@@ -5,7 +5,8 @@
 #include "parser/SaneQLParser.hpp"
 #include "semana/SemanticAnalysis.hpp"
 #include "sql/SQLWriter.hpp"
-#include "adapter/CppWriter.hpp"
+#include "adapter/p2c/foundations.hpp"
+#include "adapter/IUStorage.hpp"
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -51,39 +52,15 @@ int main(int argc, char* argv[]) {
    SemanticAnalysis semana(schema);
    try {
       auto res = semana.analyzeQuery(tree);
-      CppWriter cpp;
+      std::unique_ptr<p2c::Operator> op;
+      IUStorage s;
       if (res.isScalar()) {
-         res.scalar()->generate(cpp);
+         op = res.scalar()->generate(s);
       } else {
-         auto type = adapter::CppIU::Type::OutputOp;
          auto tree = res.table().get();
-
-         auto opIU = cpp.writeOperator(type, {}, [&]() {
-            cpp.writeln("[&]() {");
-            cpp.write("std::cout");
-
-            bool first = true;
-            for (auto& c : res.getBinding().getColumns()) {
-               if (first)
-                  first = false;
-               else
-                  cpp.write(" << \", \"");
-
-               cpp.write(" << ");
-               cpp.writeIU(c.iu);
-
-               if (c.iu->getType().getType() == Type::Varchar) {
-                  cpp.write(".toString()");
-               }
-            }
-
-            cpp.writeln(" << std::endl;");
-            cpp.write("}");
-         });
-
-         tree->generate(cpp, opIU);
+         op = tree->generate(s);
       }
-      cout << cpp.getResult() << endl;
+      p2c::produceAndPrint(op, op->availableIUs());
    } catch (const exception& e) {
       cerr << e.what() << endl;
       return 1;
