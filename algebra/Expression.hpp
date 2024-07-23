@@ -10,6 +10,12 @@
 // (c) 2023 Thomas Neumann
 // SPDX-License-Identifier: BSD-3-Clause
 //---------------------------------------------------------------------------
+namespace adapter {
+class CppWriter;
+}
+//---------------------------------------------------------------------------
+using namespace adapter;
+//---------------------------------------------------------------------------
 namespace saneql {
 //---------------------------------------------------------------------------
 enum class Collate : uint8_t;
@@ -34,16 +40,16 @@ class Expression {
 
    /// Get the result type
    Type getType() const { return type; }
+
    /// Get the IUs
-   virtual std::vector<const IU*> getIUs() const = 0;
+   virtual std::vector<const IU*> getIUs() const { return {}; }
+   /// Get the equi join property (default = false)
+   virtual bool equiJoinProperty() const { return false; }
 
    /// Generate SQL
-   virtual void generate(SQLWriter& out) = 0;
+   virtual std::string generate(IUStorage& s) = 0;
    /// Generate SQL in a form that is suitable as operand
-   virtual void generateOperand(SQLWriter& out);
-
-   protected:
-   std::vector<const IU*> combineIUs(const std::vector<std::vector<const IU*>>& ius) const;
+   virtual std::string generateOperand(IUStorage& s);
 };
 //---------------------------------------------------------------------------
 /// An IU reference
@@ -57,13 +63,16 @@ class IURef : public Expression {
 
    /// Get the IU
    const IU* getIU() const { return iu; }
+
    /// Get the IUs
-   std::vector<const IU*> getIUs() const override { return {iu}; }
+   virtual std::vector<const IU*> getIUs() const { return {iu}; }
+   /// Get the equi join property
+   bool equiJoinProperty() const override { return true; }
 
    /// Generate SQL
-   void generate(SQLWriter& out) override;
+   std::string generate(IUStorage& s) override;
    /// Generate SQL in a form that is suitable as operand
-   void generateOperand(SQLWriter& out) override { generate(out); }
+   std::string generateOperand(IUStorage& s) override { return generate(out); }
 };
 //---------------------------------------------------------------------------
 /// A constant value
@@ -79,13 +88,10 @@ class ConstExpression : public Expression {
    /// Constructor for NULL values
    ConstExpression(std::nullptr_t, Type type) : Expression(type), null(true) {}
 
-   /// Get the IUs
-   std::vector<const IU*> getIUs() const override { return {}; }
-
    /// Generate SQL
-   void generate(SQLWriter& out) override;
+   std::string generate(IUStorage& s) override;
    /// Generate SQL in a form that is suitable as operand
-   void generateOperand(SQLWriter& out) override { generate(out); }
+   std::string generateOperand(IUStorage& s) override { return generate(out); }
 };
 //---------------------------------------------------------------------------
 /// A cast expression
@@ -98,10 +104,10 @@ class CastExpression : public Expression {
    CastExpression(std::unique_ptr<Expression> input, Type type) : Expression(type), input(move(input)) {}
 
    /// Get the IUs
-   std::vector<const IU*> getIUs() const override { return input->getIUs(); }
+   virtual std::vector<const IU*> getIUs() const { return input->getIUs(); }
 
    /// Generate SQL
-   void generate(SQLWriter& out) override;
+   std::string generate(IUStorage& s) override;
 };
 //---------------------------------------------------------------------------
 /// A comparison expression
@@ -131,12 +137,12 @@ class ComparisonExpression : public Expression {
    ComparisonExpression(std::unique_ptr<Expression> left, std::unique_ptr<Expression> right, Mode mode, Collate collate);
 
    /// Get the IUs
-   std::vector<const IU*> getIUs() const override {
-      return combineIUs({left->getIUs(), right->getIUs()});
-   }
+   virtual std::vector<const IU*> getIUs() const { return util::combine(left->getIUs(), right->getIUs()); }
+   /// Get the equi join property
+   bool equiJoinProperty() const override { return mode == Mode::Equal && left->equiJoinProperty() && right->equiJoinProperty(); }
 
    /// Generate SQL
-   void generate(SQLWriter& out) override;
+   std::string generate(IUStorage& s) override;
 };
 //---------------------------------------------------------------------------
 /// A between expression
@@ -151,13 +157,8 @@ class BetweenExpression : public Expression {
    /// Constructor
    BetweenExpression(std::unique_ptr<Expression> base, std::unique_ptr<Expression> lower, std::unique_ptr<Expression> upper, Collate collate);
 
-   /// Get the IUs
-   std::vector<const IU*> getIUs() const override {
-      return combineIUs({base->getIUs(), lower->getIUs(), upper->getIUs()});
-   }
-
    /// Generate SQL
-   void generate(SQLWriter& out) override;
+   std::string generate(IUStorage& s) override;
 };
 //---------------------------------------------------------------------------
 /// An in expression
@@ -174,11 +175,8 @@ class InExpression : public Expression {
    /// Constructor
    InExpression(std::unique_ptr<Expression> probe, std::vector<std::unique_ptr<Expression>> values, Collate collate);
 
-   /// Get the IUs
-   std::vector<const IU*> getIUs() const override;
-
    /// Generate SQL
-   void generate(SQLWriter& out) override;
+   std::string generate(IUStorage& s) override;
 };
 //---------------------------------------------------------------------------
 /// A binary expression
@@ -206,12 +204,12 @@ class BinaryExpression : public Expression {
    BinaryExpression(std::unique_ptr<Expression> left, std::unique_ptr<Expression> right, Type resultType, Operation op);
 
    /// Get the IUs
-   std::vector<const IU*> getIUs() const override {
-      return combineIUs({left->getIUs(), right->getIUs()});
-   }
+   virtual std::vector<const IU*> getIUs() const { return util::combine(left->getIUs(), right->getIUs()); }
+   /// Get the equi join property
+   bool equiJoinProperty() const override { return op == Operation::And && left->equiJoinProperty() && right->equiJoinProperty() }
 
    /// Generate SQL
-   void generate(SQLWriter& out) override;
+   std::string generate(IUStorage& s) override;
 };
 //---------------------------------------------------------------------------
 /// An unary expression
@@ -232,11 +230,8 @@ class UnaryExpression : public Expression {
    /// Constructor
    UnaryExpression(std::unique_ptr<Expression> input, Type resultType, Operation op);
 
-   /// Get the IUs
-   std::vector<const IU*> getIUs() const override { return input->getIUs(); }
-
    /// Generate SQL
-   void generate(SQLWriter& out) override;
+   std::string generate(IUStorage& s) override;
 };
 //---------------------------------------------------------------------------
 /// An extract expression
@@ -257,11 +252,8 @@ class ExtractExpression : public Expression {
    /// Constructor
    ExtractExpression(std::unique_ptr<Expression> input, Part part);
 
-   /// Get the IUs
-   std::vector<const IU*> getIUs() const override { return input->getIUs(); }
-
    /// Generate SQL
-   void generate(SQLWriter& out) override;
+   std::string generate(IUStorage& s) override;
 };
 //---------------------------------------------------------------------------
 /// A substring expression
@@ -274,13 +266,8 @@ class SubstrExpression : public Expression {
    /// Constructor
    SubstrExpression(std::unique_ptr<Expression> value, std::unique_ptr<Expression> from, std::unique_ptr<Expression> len);
 
-   /// Get the IUs
-   std::vector<const IU*> getIUs() const override { 
-      return combineIUs({value->getIUs(), from->getIUs(), len->getIUs()});
-   }
-
    /// Generate SQL
-   void generate(SQLWriter& out) override;
+   std::string generate(IUStorage& s) override;
 };
 //---------------------------------------------------------------------------
 /// A simple case expression
@@ -299,12 +286,8 @@ class SimpleCaseExpression : public Expression {
    /// Constructor
    SimpleCaseExpression(std::unique_ptr<Expression> value, Cases cases, std::unique_ptr<Expression> defaultValue);
 
-   // TODO: implement
-   /// Get the IUs
-   std::vector<const IU*> getIUs() const override {}
-
    /// Generate SQL
-   void generate(SQLWriter& out) override;
+   std::string generate(IUStorage& s) override;
 };
 //---------------------------------------------------------------------------
 /// A searched case expression
@@ -321,12 +304,8 @@ class SearchedCaseExpression : public Expression {
    /// Constructor
    SearchedCaseExpression(Cases cases, std::unique_ptr<Expression> defaultValue);
 
-   // TODO: implement
-   /// Get the IUs
-   std::vector<const IU*> getIUs() const override {}
-
    /// Generate SQL
-   void generate(SQLWriter& out) override;
+   std::string generate(IUStorage& s) override;
 };
 //---------------------------------------------------------------------------
 /// Helper for aggregation steps
@@ -399,12 +378,8 @@ class Aggregate : public Expression, public AggregationLike {
    /// Constructor
    Aggregate(std::unique_ptr<Operator> input, std::vector<Aggregation> aggregates, std::unique_ptr<Expression> computation);
 
-   // TODO: implement
-   /// Get the IUs
-   std::vector<const IU*> getIUs() const override {}
-
    // Generate SQL
-   void generate(SQLWriter& out) override;
+   std::string generate(IUStorage& s) override;
 };
 //---------------------------------------------------------------------------
 /// A foreign call expression
@@ -424,13 +399,9 @@ struct ForeignCall : public Expression {
    public:
    /// Constructor
    ForeignCall(std::string name, Type returnType, std::vector<std::unique_ptr<Expression>> arguments, CallType callType);
-
-   // TODO: implement
-   /// Get the IUs
-   std::vector<const IU*> getIUs() const override {}
    
    /// Generate SQL
-   void generate(SQLWriter& out) override;
+   std::string generate(IUStorage& s) override;
 };
 //---------------------------------------------------------------------------
 }

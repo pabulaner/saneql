@@ -91,6 +91,8 @@ class Schema {
       std::string name;
       /// The type
       Type type;
+      /// Is key
+      bool isKey;
    };
    /// A table definition
    struct Table {
@@ -106,6 +108,8 @@ class Schema {
    void createTable(std::string name, std::initializer_list<Column> columns);
    /// Create the TPC-H schema
    void createTPCH();
+   /// Create the TPC-C schema
+   void createTPCC();
 
    public:
    /// Create some test schema for experiments
