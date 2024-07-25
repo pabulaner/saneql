@@ -1,10 +1,16 @@
 #pragma once
 
 #include <vector>
+#include <algorithm>
 
 namespace adapter {
 
 namespace util {
+
+template <typename T>
+bool contains(const std::vector<T>& vec, const T& value) {
+    return std::find(vec.begin(), vec.end(), value) != vec.end();
+}
 
 template <typename TOut, typename TIn, typename TMapFn>
 std::vector<TOut> map(const std::vector<TIn>& in, TMapFn map) {

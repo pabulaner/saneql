@@ -22,10 +22,23 @@ TableScan::TableScan(string name, vector<Column> columns)
 std::unique_ptr<p2c::Operator> TableScan::generate(IUStorage& s)
 // Generate SQL
 {
-   auto op = std::make_unique<p2c::Scan>(name);
+   std::vector<p2c::IU> keyIUs;
+   std::vector<p2c::IU> ius;
+
+   for (auto& c : columns) {
+      auto iu = p2c::IU{c.name, p2c::Type::Undefined};
+      if (c.isKey) 
+         keyIUs.push_back(iu);
+      else
+         ius.push_back(iu);
+   }
+
+   auto op = std::make_unique<p2c::Scan>(name, keyIUs, ius);
+   
    for (auto& c : columns) {
       s.add(c.iu.get(), op->getIU(c.name));
    }
+
    return op;
 }
 //---------------------------------------------------------------------------
@@ -38,7 +51,8 @@ Select::Select(unique_ptr<Operator> input, unique_ptr<Expression> condition)
 std::unique_ptr<p2c::Operator> Select::generate(IUStorage& s)
 // Generate SQL
 {
-   return std::make_unique<p2c::Selection>(input->generate(s), condition->generate(s));
+   auto inOp = input->generate(s);
+   return std::make_unique<p2c::Selection>(std::move(inOp), condition->generate(s));
 }
 //---------------------------------------------------------------------------
 Map::Map(unique_ptr<Operator> input, vector<Entry> computations)
@@ -47,7 +61,7 @@ Map::Map(unique_ptr<Operator> input, vector<Entry> computations)
 {
 }
 //---------------------------------------------------------------------------
-std::unique_ptr<pc2::Operator> Map::generate(IUStorage& s)
+std::unique_ptr<p2c::Operator> Map::generate(IUStorage& s)
 // Generate SQL
 {
    auto op = input->generate(s);
@@ -65,7 +79,7 @@ SetOperation::SetOperation(unique_ptr<Operator> left, unique_ptr<Operator> right
 {
 }
 //---------------------------------------------------------------------------
-std::unique_ptr<pc2::Operator> SetOperation::generate(IUStorage& s)
+std::unique_ptr<p2c::Operator> SetOperation::generate(IUStorage& s)
 // Generate SQL
 {
    return nullptr;
@@ -77,16 +91,19 @@ Join::Join(unique_ptr<Operator> left, unique_ptr<Operator> right, unique_ptr<Exp
 {
 }
 //---------------------------------------------------------------------------
-std::unique_ptr<pc2::Operator> Join::generate(IUStorage& s)
+std::unique_ptr<p2c::Operator> Join::generate(IUStorage& s)
 // Generate SQL
 {
    if (!condition->equiJoinProperty()) {
       throw;
    }
 
+   auto inLeftOp = left->generate(s);
+   auto inRightOp = right->generate(s);
+
    std::vector<const IU*> ius = condition->getIUs();
-   std::vector<const p2c::IU*> leftKeyIUs;
-   std::vector<const p2c::IU*> rightKeyIUs;
+   std::vector<p2c::IU*> leftKeyIUs;
+   std::vector<p2c::IU*> rightKeyIUs;
 
    for (auto iu : left->getIUs()) {
       if (std::find(ius.begin(), ius.end(), iu) != ius.end()) {
@@ -99,7 +116,7 @@ std::unique_ptr<pc2::Operator> Join::generate(IUStorage& s)
       }
    }
 
-   return std::make_unique<p2c::HashJoin>(left->generate(s), right->generate(s), leftKeyIUs, rightKeyIUs);
+   return std::make_unique<p2c::HashJoin>(std::move(inLeftOp), std::move(inRightOp), leftKeyIUs, rightKeyIUs);
 }
 //---------------------------------------------------------------------------
 GroupBy::GroupBy(unique_ptr<Operator> input, vector<Entry> groupBy, vector<Aggregation> aggregates)
@@ -108,7 +125,7 @@ GroupBy::GroupBy(unique_ptr<Operator> input, vector<Entry> groupBy, vector<Aggre
 {
 }
 //---------------------------------------------------------------------------
-std::unique_ptr<pc2::Operator> GroupBy::generate(IUStorage& s)
+std::unique_ptr<p2c::Operator> GroupBy::generate(IUStorage& s)
 // Generate SQL
 {
    return nullptr;
@@ -120,7 +137,7 @@ Sort::Sort(unique_ptr<Operator> input, vector<Entry> order, optional<uint64_t> l
 {
 }
 //---------------------------------------------------------------------------
-std::unique_ptr<pc2::Operator> Sort::generate(IUStorage& s)
+std::unique_ptr<p2c::Operator> Sort::generate(IUStorage& s)
 // Generate SQL
 {
    return nullptr;
@@ -132,7 +149,7 @@ Window::Window(unique_ptr<Operator> input, vector<Aggregation> aggregates, vecto
 {
 }
 //---------------------------------------------------------------------------
-std::unique_ptr<pc2::Operator> Window::generate(IUStorage& s)
+std::unique_ptr<p2c::Operator> Window::generate(IUStorage& s)
 // Generate SQL
 {
    return nullptr;
@@ -144,7 +161,7 @@ InlineTable::InlineTable(vector<unique_ptr<algebra::IU>> columns, vector<unique_
 {
 }
 //---------------------------------------------------------------------------
-std::unique_ptr<pc2::Operator> InlineTable::generate(IUStorage& s)
+std::unique_ptr<p2c::Operator> InlineTable::generate(IUStorage& s)
 // Generate SQL
 {
    return nullptr;

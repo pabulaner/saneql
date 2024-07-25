@@ -1,6 +1,9 @@
 #ifndef H_saneql_Expression
 #define H_saneql_Expression
 //---------------------------------------------------------------------------
+#include "adapter/IUStorage.hpp"
+#include "adapter/Util.hpp"
+#include "adapter/p2c/foundations.hpp"
 #include "infra/Schema.hpp"
 #include "semana/Functions.hpp"
 #include <memory>
@@ -72,7 +75,7 @@ class IURef : public Expression {
    /// Generate SQL
    std::string generate(IUStorage& s) override;
    /// Generate SQL in a form that is suitable as operand
-   std::string generateOperand(IUStorage& s) override { return generate(out); }
+   std::string generateOperand(IUStorage& s) override { return generate(s); }
 };
 //---------------------------------------------------------------------------
 /// A constant value
@@ -91,7 +94,7 @@ class ConstExpression : public Expression {
    /// Generate SQL
    std::string generate(IUStorage& s) override;
    /// Generate SQL in a form that is suitable as operand
-   std::string generateOperand(IUStorage& s) override { return generate(out); }
+   std::string generateOperand(IUStorage& s) override { return generate(s); }
 };
 //---------------------------------------------------------------------------
 /// A cast expression
@@ -206,7 +209,7 @@ class BinaryExpression : public Expression {
    /// Get the IUs
    virtual std::vector<const IU*> getIUs() const { return util::combine(left->getIUs(), right->getIUs()); }
    /// Get the equi join property
-   bool equiJoinProperty() const override { return op == Operation::And && left->equiJoinProperty() && right->equiJoinProperty() }
+   bool equiJoinProperty() const override { return op == Operation::And && left->equiJoinProperty() && right->equiJoinProperty(); }
 
    /// Generate SQL
    std::string generate(IUStorage& s) override;

@@ -1,5 +1,3 @@
 warehouse
-.filter(w_id = 1)
-.map({w_id2 := w_id * 2})
-.join(district, d_w_id = w_id)
+.filter(w_id > 5)
 

@@ -52,15 +52,17 @@ int main(int argc, char* argv[]) {
    SemanticAnalysis semana(schema);
    try {
       auto res = semana.analyzeQuery(tree);
-      std::unique_ptr<p2c::Operator> op;
       IUStorage s;
+
       if (res.isScalar()) {
-         op = res.scalar()->generate(s);
+         std::cout << res.scalar()->generate(s);
       } else {
          auto tree = res.table().get();
-         op = tree->generate(s);
+         auto op = tree->generate(s);
+         auto ius = op->availableIUs().v;
+
+         p2c::produceAndPrint(std::move(op), ius);
       }
-      p2c::produceAndPrint(op, op->availableIUs());
    } catch (const exception& e) {
       cerr << e.what() << endl;
       return 1;

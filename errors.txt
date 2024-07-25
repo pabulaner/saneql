@@ -1,0 +1,12 @@
+In file included from ./adapter/p2c/tpch.hpp:8,
+                 from ./adapter/p2c/foundations.hpp:19,
+                 from ./adapter/IUStorage.hpp:5,
+                 from ./algebra/Expression.hpp:4,
+                 from semana/SemanticAnalysis.cpp:2:
+./adapter/p2c/io.hpp:109:10: warning: type qualifiers ignored on function return type [-Wignored-qualifiers]
+  109 |   inline const iterator begin() const { return data(); }
+      |          ^~~~~
+./adapter/p2c/io.hpp:110:10: warning: type qualifiers ignored on function return type [-Wignored-qualifiers]
+  110 |   inline const iterator end() const {
+      |          ^~~~~
+make: *** [Makefile:43: bin/semana/SemanticAnalysis.o] Interrupt

@@ -17,9 +17,7 @@
 #include <sstream>
 #include "types.hpp"
 #include "tpch.hpp"
-
-using namespace std;
-using namespace fmt;
+#include "../Util.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -27,45 +25,29 @@ using namespace fmt;
 
 namespace p2c {
 
-string genVar(const string& name) {
-   static unsigned varCounter = 1;
-   return format("{}{}", name, varCounter++);
-}
+using namespace std;
+using namespace fmt;
+using namespace adapter;
+
+string genVar(const string& name);
 
 struct IU {
    string name;
-   Type type;
+   string type;
    string varname;
 
-   IU(const string& name, Type type) : name(name), type(type), varname(genVar(name)) {}
+   IU(const string& name, Type type) : name(name), type(tname(type)), varname(genVar(name)) {}
+   IU(const string& name, string type) : name(name), type(type), varname(genVar(name)) {}
 };
 
 // format comma-separated list of IU types (helper function)
-string formatTypes(const vector<IU*>& ius) {
-   stringstream ss;
-   for (IU* iu : ius)
-      ss << tname(iu->type) << ",";
-   string result = ss.str();
-   if (result.size())
-      result.pop_back(); // remove last ','
-   return result;
-}
+string formatTypes(const vector<IU*>& ius);
 
 // format comma-separated list of IU varnames (helper function)
-string formatVarnames(const vector<IU*>& ius) {
-   stringstream ss;
-   for (IU* iu : ius)
-      ss << iu->varname << ",";
-   string result = ss.str();
-   if (result.size())
-      result.pop_back(); // remove last ','
-   return result;
-}
+string formatVarnames(const vector<IU*>& ius);
 
 // provide an IU by generating local variable (helper)
-void provideIU(IU* iu, const string& value) {
-   print("{} {} = {};\n", tname(iu->type), iu->varname, value);
-}
+void provideIU(IU* iu, const string& value);
 
 // an unordered set of IUs
 struct IUSet {
@@ -112,30 +94,16 @@ struct IUSet {
 };
 
 // set union operator
-IUSet operator|(const IUSet& a, const IUSet& b) {
-   IUSet result;
-   set_union(a.v.begin(), a.v.end(), b.v.begin(), b.v.end(), back_inserter(result.v));
-   return result;
-}
+IUSet operator|(const IUSet& a, const IUSet& b);
 
 // set intersection operator
-IUSet operator&(const IUSet& a, const IUSet& b) {
-   IUSet result;
-   set_intersection(a.v.begin(), a.v.end(), b.v.begin(), b.v.end(), back_inserter(result.v));
-   return result;
-}
+IUSet operator&(const IUSet& a, const IUSet& b);
 
 // set difference operator
-IUSet operator-(const IUSet& a, const IUSet& b) {
-   IUSet result;
-   set_difference(a.v.begin(), a.v.end(), b.v.begin(), b.v.end(), back_inserter(result.v));
-   return result;
-}
+IUSet operator-(const IUSet& a, const IUSet& b);
 
 // set equality operator
-bool operator==(const IUSet& a, const IUSet& b) {
-   return equal(a.v.begin(), a.v.end(), b.v.begin(), b.v.end());
-}
+bool operator==(const IUSet& a, const IUSet& b);
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -233,20 +201,14 @@ struct Operator {
 // table scan operator
 struct Scan : public Operator {
    // IU storage for all available attributes
-   vector<IU> attributes;
+   vector<IU> keyIUs;
+   vector<IU> ius;
    // relation name
    string relName;
 
    // constructor
-   Scan(const string& relName) : relName(relName) {
+   Scan(const string& relName, std::vector<IU> keyIUs, std::vector<IU> ius) : relName(relName), keyIUs(keyIUs), ius(ius) {
       // get relation info from schema
-      auto it = TPCH::schema.find(relName);
-      assert(it != TPCH::schema.end());
-      auto& rel = it->second;
-      // create IUs for all available attributes
-      attributes.reserve(rel.size());
-      for (auto& att : rel)
-         attributes.emplace_back(IU{att.first, att.second});
    }
 
    // destructor
@@ -254,7 +216,9 @@ struct Scan : public Operator {
 
    IUSet availableIUs() override {
       IUSet result;
-      for (auto& iu : attributes)
+      for (auto& iu : keyIUs)
+         result.add(&iu);
+      for (auto& iu : ius) 
          result.add(&iu);
       return result;
    }
@@ -263,17 +227,35 @@ struct Scan : public Operator {
       // ===============================================
       // Sets the scale of perf event counters.
       // Don't change this line.
-      print("perf.scale += db.{}.tupleCount;", relName);
+      // print("perf.scale += db.{}.tupleCount;", relName);
       // ===============================================
-      genBlock(format("for (uint64_t i = 0; i != db.{}.tupleCount; i++)", relName), [&]() {
-         for (IU* iu : required)
-            provideIU(iu, format("db.{}.{}[i]", relName, iu->name));
+      genBlock(format("db->{}.forEach([&](auto& key, auto& value)", relName), [&]() {
+         for (IU* iu : required) {
+            if (isKey(iu))
+               print("{} {} = key.{};\n", iu->type, iu->varname, iu->name);
+            else
+               print("{} {} = value.{};\n", iu->type, iu->varname, iu->name);
+         }
          consume();
       });
+      print(");");
+   }
+
+   bool isKey(IU* iu) {
+      for (auto& otherIU : keyIUs) {
+         if (iu == &otherIU) {
+            return true;
+         }
+      }
+
+      return false;
    }
 
    IU* getIU(const string& attName) {
-      for (IU& iu : attributes)
+      for (auto& iu : keyIUs)
+         if (iu.name == attName)
+            return &iu;
+      for (auto& iu : ius)
          if (iu.name == attName)
             return &iu;
       throw;
@@ -296,7 +278,7 @@ struct Selection : public Operator {
    }
 
    void produce(const IUSet& required, ConsumerFn consume) override {
-      input->produce(required | pred->iusUsed(), [&]() {
+      input->produce(required /* TODO | pred->iusUsed() */, [&]() {
          genBlock(format("if ({})", pred), [&]() {
             consume();
          });
@@ -597,27 +579,7 @@ unique_ptr<Exp> makeCallExp(const string& fn,  std::unique_ptr<T>... args) {
 }
 
 // Print
-void produceAndPrint(unique_ptr<Operator> root, const std::vector<IU*>& ius, unsigned perfRepeat = 2, uint64_t offset = 0, int64_t count = -1) {
-   genBlock(
-      format("for (uint64_t {0} = 0; {0} != {1}; {0}++)", genVar("perfRepeat"), perfRepeat - 1),
-      [&]() {
-         IU mat{"row", Type::BigInt};
-         provideIU(&mat, "0");
-         root->produce(IUSet(ius), [&]() {
-            auto if_in_offset = format("if ({0} >= {1} && {0} < {2})", mat.varname, to_string(offset), to_string(offset+count));
-            if (count == -1) {
-               if_in_offset  = format("if ({0} >= {1})", mat.varname, to_string(offset));
-            }
-            genBlock(if_in_offset,
-            [&]() {
-               for (IU *iu : ius)
-                  print("cerr << {} << \" \";", iu->varname);
-               print("cerr << endl;\n");
-            });
-            print("{}++;", mat.varname);
-         });
-      });
-}
+void produceAndPrint(unique_ptr<Operator> root, const std::vector<IU*>& ius, unsigned perfRepeat = 2, uint64_t offset = 0, int64_t count = -1);
 
 } // namespace p2c
 

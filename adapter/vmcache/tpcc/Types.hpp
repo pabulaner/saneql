@@ -73,6 +73,8 @@ struct Varchar {
       else
          return length < other.length;
    }
+
+   friend std::ostream& operator<<(std::ostream& os, const Varchar<maxLength>& value);
 };
 // -------------------------------------------------------------------------------------
 // Fold functions convert integers to a lexicographical comparable format
@@ -128,4 +130,10 @@ unsigned unfold(const u8* input, Varchar<len>& x)
    memcpy(x.data, input, l);
    x.length = l;
    return l + 1;
+}
+
+template <int len>
+std::ostream& operator<<(std::ostream& os, const Varchar<len>& value) {
+   os << value.toString();
+   return os;
 }

@@ -137,7 +137,7 @@ UnaryExpression::UnaryExpression(unique_ptr<Expression> input, Type resultType, 
 std::string UnaryExpression::generate(IUStorage& s)
 // Generate SQL
 {
-   std::string result = "";
+   std::string result;
    switch (op) {
       case Operation::Plus: result += "+"; break;
       case Operation::Minus: result += "-"; break;

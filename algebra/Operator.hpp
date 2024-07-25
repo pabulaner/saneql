@@ -3,6 +3,7 @@
 //---------------------------------------------------------------------------
 #include "adapter/Util.hpp"
 #include "adapter/IUStorage.hpp"
+#include "adapter/p2c/foundations.hpp"
 #include "algebra/Expression.hpp"
 #include "infra/Schema.hpp"
 #include <memory>
@@ -200,7 +201,7 @@ class GroupBy : public Operator, public AggregationLike {
    GroupBy(std::unique_ptr<Operator> input, std::vector<Entry> groupBy, std::vector<Aggregation> aggregates);
 
    // Get the IUs
-   std::vector<const IU*> getIUs() const override { return util::combine(left->getIUs(), right->getIUs()); }
+   std::vector<const IU*> getIUs() const override { return util::combine(util::map<const IU*>(groupBy, [](auto& value) { return value.iu.get(); }), util::map<const IU*>(aggregates, [](auto& value) { return value.iu.get(); })); }
    // Generate SQL
    std::unique_ptr<p2c::Operator> generate(IUStorage& s) override;
 };
