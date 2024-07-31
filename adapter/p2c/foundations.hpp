@@ -284,11 +284,11 @@ struct Selection : public Operator {
 // map operator (compute new value)
 struct Map : public Operator {
    unique_ptr<Operator> input;
-   unique_ptr<Exp> exp;
+   std::string exp;
    IU iu;
 
    // constructor
-   Map(unique_ptr<Operator> input, unique_ptr<Exp> exp, const string& name) : input(std::move(input)), exp(std::move(exp)), iu{"map", Type::Undefined} {}
+   Map(unique_ptr<Operator> input, const std::string& exp) : input(std::move(input)), exp(exp), iu{"map", Type::Undefined} {}
 
    // destructor
    ~Map() {}
@@ -297,13 +297,12 @@ struct Map : public Operator {
       return input->availableIUs() | IUSet({&iu});
    }
 
-   void produce(const IUSet& required, ConsumerFn consume) override {
-      input->produce((required | exp->iusUsed()) - IUSet({&iu}), [&]() {
-            genBlock("", [&]() {
-               provideIU(&iu, exp->compile());
-               consume();
-            });
-         });
+   void produce(const IUSet& required, ConsumerFn consume) override {\
+      IUSet req = required - IUSet({&iu});
+      input->produce(req, [&]{
+         provideIU(&iu, exp);
+         consume();
+      });
    }
 
    IU* getIU() {
