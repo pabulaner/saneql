@@ -128,7 +128,27 @@ GroupBy::GroupBy(unique_ptr<Operator> input, vector<Entry> groupBy, vector<Aggre
 std::unique_ptr<p2c::Operator> GroupBy::generate(IUStorage& s)
 // Generate SQL
 {
-   return nullptr;
+   auto inOp = input->generate(s);
+   for (auto& g : groupBy) {
+      auto mapOp = std::make_unique<p2c::Map>(std::move(inOp), g.value->generate(s));
+      s.add(g.iu.get(), mapOp->getIU());
+      inOp = std::move(mapOp);
+   }
+   auto op = std::make_unique<p2c::GroupBy>(std::move(inOp), util::map<p2c::IU*>(groupBy, [&](const Entry& entry) { return s.get(entry.iu.get()); }));
+   
+   for (auto& a : aggregates) {
+      p2c::IU* iu = s.get(a.iu.get());
+      std::vector<p2c::IU*> ius = s.get(a.value->getIUs());
+      std::string name = iu->varname;
+      std::string value = a.value->generateOperand(s);
+      switch (a.op) {
+         case Op::Sum: op->addSum(name, ius, value); break;
+         case Op::Count: op->addCount(name); break;
+         case Op::Min: op->addMin(name, ius, value); break;
+      }
+   }
+
+   return op;
 }
 //---------------------------------------------------------------------------
 Sort::Sort(unique_ptr<Operator> input, vector<Entry> order, optional<uint64_t> limit, optional<uint64_t> offset)
@@ -140,7 +160,8 @@ Sort::Sort(unique_ptr<Operator> input, vector<Entry> order, optional<uint64_t> l
 std::unique_ptr<p2c::Operator> Sort::generate(IUStorage& s)
 // Generate SQL
 {
-   return nullptr;
+   auto inOp = input->generate(s);
+   return std::make_unique<p2c::Sort>(std::move(inOp), util::map<std::string>(order, [&](const Entry& entry) { return entry.value->generate(s); }));
 }
 //---------------------------------------------------------------------------
 Window::Window(unique_ptr<Operator> input, vector<Aggregation> aggregates, vector<unique_ptr<Expression>> partitionBy, vector<Sort::Entry> orderBy)

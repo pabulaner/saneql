@@ -74,7 +74,8 @@ struct Varchar {
          return length < other.length;
    }
 
-   friend std::ostream& operator<<(std::ostream& os, const Varchar<maxLength>& value);
+   template <int len>
+   friend std::ostream& operator<<(std::ostream& os, const Varchar<len>& value);
 };
 // -------------------------------------------------------------------------------------
 // Fold functions convert integers to a lexicographical comparable format

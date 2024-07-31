@@ -63,6 +63,11 @@ bool operator==(const IUSet& a, const IUSet& b) {
 void produceAndPrint(unique_ptr<Operator> root, const std::vector<IU*>& ius, unsigned perfRepeat, uint64_t offset, int64_t count) {
    IU mat{"row", Type::BigInt};
    provideIU(&mat, "0");
+   print("std::cout << \"[QUERY_BEGIN]\" << std::endl;\n");
+   for (IU* iu : ius) {
+      print("std::cout << \"{},\";", iu->name);
+   }
+   print("std::cout << std::endl;\n");
    root->produce(IUSet(ius), [&]() {
       auto if_in_offset = format("if ({0} >= {1} && {0} < {2})", mat.varname, to_string(offset), to_string(offset+count));
       if (count == -1) {
@@ -71,11 +76,12 @@ void produceAndPrint(unique_ptr<Operator> root, const std::vector<IU*>& ius, uns
       genBlock(if_in_offset,
       [&]() {
          for (IU *iu : ius)
-            print("cerr << {} << \" \";", iu->varname);
-         print("cerr << endl;\n");
+            print("std::cout << {} << \",\";", iu->varname);
+         print("std::cout << std::endl;\n");
       });
       print("{}++;", mat.varname);
    });
+   print("std::cout << \"[QUERY_END]\" << std::endl;\n");
 }
 
 }
