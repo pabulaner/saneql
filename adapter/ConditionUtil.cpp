@@ -41,12 +41,26 @@ std::unique_ptr<Expression> combineRequired(std::vector<std::unique_ptr<Expressi
     return combineRequired(required);
 }
 
-IndexJoinData extractIndexJoinConditions(Operator* tree, std::unique_ptr<Expression> condition) {
+EqualBinaryExpressionData extractEqualBinaryExpressionPairs(Operator* tree, std::unique_ptr<Expression> condition) {
+    EqualBinaryExpressionData result;
     std::vector<std::unique_ptr<Expression>> required = splitRequired(std::move(condition));
 
-    for (auto& r : required) {
-        
+    for (size_t i = 0; i < required.size(); i++) {
+        BinaryExpression* exp = dynamic_cast<BinaryExpression*>(required[i].get());
+
+        if (exp) {
+            IURef* left = dynamic_cast<IURef*>(exp->left.get());
+            IURef* right = dynamic_cast<IURef*>(exp->right.get());
+
+            if (left && right) {
+                result.pairs.push_back({left->getIU(), right->getIU()});
+                required.erase(required.begin() + (i--));
+            }
+        }
     }
+
+    result.condition = combineRequired(&required);
+    return result;
 }
 
 }

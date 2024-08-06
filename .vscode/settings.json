@@ -79,6 +79,9 @@
         "locale": "cpp",
         "queue": "cpp",
         "source_location": "cpp",
-        "stack": "cpp"
+        "stack": "cpp",
+        "chrono": "cpp",
+        "__memory": "cpp",
+        "filesystem": "cpp"
     }
 }

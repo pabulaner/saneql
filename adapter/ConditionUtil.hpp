@@ -12,19 +12,13 @@ namespace cutil {
 
 using namespace saneql::algebra;
 
-// Struct used to store IU pairs for an index join
-struct IndexJoinPair {
-    // The IU that can be used with a index scan
-    const IU* indexIU;
-    // The IU that is compared to the index IU in the index join
-    const IU* otherIU;
-};
+typedef std::pair<const IU*, const IU*> IUPair;
 
-struct IndexJoinData {
-    // The condition without the index join conditions
+struct EqualBinaryExpressionData {
+    // The condition without the equal binary expressions
     std::unique_ptr<Expression> condition;
-    // The index join pairs extracted from the condition
-    std::vector<IndexJoinPair> indexJoinPairs;
+    // The IU pairs from the equal binary expressions
+    std::vector<IUPair> pairs;
 };
 
 // Splits the provided condition in the required conditions that need to be satisfied for the condition to be true
@@ -33,8 +27,8 @@ std::vector<std::unique_ptr<Expression>> splitRequired(std::unique_ptr<Expressio
 // Combines the provided required conditions into one condition that is connected with AND
 std::unique_ptr<Expression> combineRequired(const std::vector<std::unique_ptr<Expression>>& required);
 
-// Extracts the index join pairs from the provided condition if there are any
-IndexJoinData extractIndexJoinConditions(Operator* tree, std::unique_ptr<Expression> condition);
+// Extracts the pairs of IUs that are compared with each other for equality and that are required for the condition to be true
+EqualBinaryExpressionData extractEqualBinaryExpressionPairs(Operator* tree, std::unique_ptr<Expression> condition);
 
 }
 
