@@ -155,6 +155,10 @@ void CppWriter::writeIU(const IU* iu) {
     }
 }
 
+void CppWriter::clearIU(const IU* iu) {
+    iuNames.erase(iu);
+}
+
 std::string CppWriter::getResult() const {
     return structResult
         + iuResult

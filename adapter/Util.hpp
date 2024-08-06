@@ -1,10 +1,25 @@
 #pragma once
 
 #include <vector>
+#include <algorithm>
 
 namespace adapter {
 
 namespace util {
+
+template <typename T>
+bool contains(const std::vector<T>& vec, const T& value) {
+    return std::find(vec.begin(), vec.end(), value) != vec.end();
+}
+
+template <typename T>
+void replace(std::vector<T>* vec, const T& oldValue, const T& newValue) {
+    for (size_t i = 0; i < vec->size(); i++) {
+        if (vec->at(i) == oldValue) {
+            (*vec)[i] = newValue;
+        }
+    }
+}
 
 template <typename TOut, typename TIn, typename TMapFn>
 std::vector<TOut> map(const std::vector<TIn>& in, TMapFn map) {

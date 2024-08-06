@@ -114,7 +114,7 @@ SetOperation::SetOperation(unique_ptr<Operator> left, unique_ptr<Operator> right
 const CppIU* SetOperation::generate(CppWriter& out, const CppIU* next)
 // Generate SQL
 {
-   return nullptr;
+   throw;
 }
 //---------------------------------------------------------------------------
 Join::Join(unique_ptr<Operator> left, unique_ptr<Operator> right, unique_ptr<Expression> condition, JoinType joinType)
@@ -189,7 +189,6 @@ const CppIU* GroupBy::generate(CppWriter& out, const CppIU* next)
          valueStructIUs.push_back(avgCountIUs[a.iu.get()].get());
       }
    }
-
 
    const CppIU* keyStructIU = out.writeStruct(keyStructIUs);
    const CppIU* valueStructIU = out.writeStruct(valueStructIUs);
@@ -266,7 +265,69 @@ Sort::Sort(unique_ptr<Operator> input, vector<Entry> order, optional<uint64_t> l
 const CppIU* Sort::generate(CppWriter& out, const CppIU* next)
 // Generate SQL
 {
-   return nullptr;
+   std::vector<std::unique_ptr<IU>> ius = util::map<std::unique_ptr<IU>>(order, [&](const Entry& e) { return std::make_unique<IU>(e.value->getType().getType()); });
+   std::vector<const IU*> sortIUs = util::map<const IU*>(sortIUs, [&](const std::unique_ptr<IU>& i) { return i.get(); });
+   std::vector<const IU*> valueIUs = input->getIUs();
+
+   const CppIU* structIU = out.writeStruct(util::combine(sortIUs, valueIUs));
+
+   auto type = CppIU::Type::SortOp;
+   std::string nextParam = next->getRef();
+   std::string structParam = structIU->getName();
+
+   const CppIU* opIU = out.writeOperator(
+      type, {nextParam, structParam},
+      [&]() {
+         out.writeln("[&]() {");
+         out.write("return " + structIU->getName() + "{");
+
+         bool first = true;
+         for (auto& o : order) {
+            if (first)
+               first = false;
+            else 
+               out.write(", ");
+            o.value->generate(out);
+         }
+         for (auto iu : valueIUs) {
+            if (first)
+               first = false;
+            else 
+               out.write(", ");
+            out.writeIU(iu);
+         }
+
+         out.writeln("};");
+         out.writeln("}, [&](const " + structIU->getName() + "& row) {");
+
+         for (auto iu : valueIUs) {
+            out.writeIU(iu);
+            out.write(" = row.");
+            out.writeIU(iu);
+            out.writeln(";");
+         }
+
+         out.writeln("}, [&](const " + structIU->getName() + "& row1, const " + structIU->getName() + "& row2) {");
+
+         for (size_t i = 0; i < order.size(); i++) {
+            auto& o = order[i];
+            auto iu = sortIUs[i];
+
+            out.write("if (row1.");
+            out.writeIU(iu);
+            out.write(" < row2.");
+            out.writeIU(iu);
+            out.writeln(") return ");
+            out.write(o.descending ? "false" : "true");
+            out.writeln(";");
+         }
+
+         out.writeln("return false;");
+         out.writeln("}");
+      });
+
+   input->generate(out, opIU);
+   return opIU;
 }
 //---------------------------------------------------------------------------
 Window::Window(unique_ptr<Operator> input, vector<Aggregation> aggregates, vector<unique_ptr<Expression>> partitionBy, vector<Sort::Entry> orderBy)
@@ -278,7 +339,7 @@ Window::Window(unique_ptr<Operator> input, vector<Aggregation> aggregates, vecto
 const CppIU* Window::generate(CppWriter& out, const CppIU* next)
 // Generate SQL
 {
-   return nullptr;
+   throw;
 }
 //---------------------------------------------------------------------------
 InlineTable::InlineTable(vector<unique_ptr<algebra::IU>> columns, vector<unique_ptr<algebra::Expression>> values, unsigned rowCount)
@@ -290,7 +351,7 @@ InlineTable::InlineTable(vector<unique_ptr<algebra::IU>> columns, vector<unique_
 const CppIU* InlineTable::generate(CppWriter& out, const CppIU* next)
 // Generate SQL
 {
-   return nullptr;
+   throw;
 }
 //---------------------------------------------------------------------------
 }

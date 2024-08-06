@@ -28,6 +28,7 @@ class CppIU {
         MapOp,
         JoinOp,
         GroupByOp,
+        SortOp,
         OutputOp
     };
 
@@ -94,6 +95,8 @@ class CppWriter {
     void writeProcess(const CppIU* opIU);
     /// Write IU to operatorResult and declare it in iuResult
     void writeIU(const IU* iu);
+    /// Clear IU from the writer
+    void clearIU(const IU* iu);
 
     /// Get the final result
     std::string getResult() const;

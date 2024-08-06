@@ -2,6 +2,7 @@
 #define H_saneql_Operator
 //---------------------------------------------------------------------------
 #include "adapter/Util.hpp"
+#include "adapter/Optimizer.hpp"
 #include "algebra/Expression.hpp"
 #include "infra/Schema.hpp"
 #include <memory>
@@ -45,9 +46,15 @@ class Operator {
    virtual ~Operator();
 
    // Get the IUs
-   virtual std::vector<const IU*> getIUs() const { return {}; };
+   virtual std::vector<const IU*> getIUs() const { return {}; }
+   // Get the inputs
+   virtual std::vector<Operator*> getInputs();
+   // Set the inputs
+   virtual void setInputs(const std::vector<Operator*>& inputs) {}
    // Generate SQL
    virtual const CppIU* generate(CppWriter& out, const CppIU* next) = 0;
+
+   friend class adapter::Optimizer;
 };
 //---------------------------------------------------------------------------
 /// A table scan operator
@@ -74,7 +81,8 @@ class TableScan : public Operator {
    TableScan(std::string name, std::vector<Column> columns);
 
    // Get the IUs
-   std::vector<const IU*> getIUs() const override { return util::map<const IU*>(columns, [](const Column& c) { return c.iu.get(); }); }
+   std::vector<const IU*> getIUs() const override { return util::map<const IU*>(columns, [&](const Column& c) { return c.iu.get(); }); }
+
    // Generate SQL
    const CppIU* generate(CppWriter& out, const CppIU* next) override;
 };
@@ -92,8 +100,14 @@ class Select : public Operator {
 
    // Get the IUs
    std::vector<const IU*> getIUs() const override { return input->getIUs(); }
+   // Get the inputs
+   std::vector<Operator*> getInputs() override { return { input.get() }; }
+   // Set the inputs
+   void setInputs(const std::vector<Operator*>& inputs) override { input.reset(inputs[0]); }
    // Generate SQL
    const CppIU* generate(CppWriter& out, const CppIU* next) override;
+
+   friend class adapter::Optimizer;
 };
 //---------------------------------------------------------------------------
 /// A map operator
@@ -113,6 +127,10 @@ class Map : public Operator {
 
    // Get the IUs
    std::vector<const IU*> getIUs() const override { return input->getIUs(); }
+   // Get the inputs
+   std::vector<Operator*> getInputs() override { return { input.get() }; }
+   // Set the inputs
+   void setInputs(const std::vector<Operator*>& inputs) override { input.reset(inputs[0]); }
    // Generate SQL
    const CppIU* generate(CppWriter& out, const CppIU* next) override;
 };
@@ -180,6 +198,10 @@ class Join : public Operator {
 
    // Get the IUs
    std::vector<const IU*> getIUs() const override { return util::combine(left->getIUs(), right->getIUs()); }
+   // Get the inputs
+   std::vector<Operator*> getInputs() override { return { left.get(), right.get() }; }
+   // Set the inputs
+   void setInputs(const std::vector<Operator*>& inputs) override { left.reset(inputs[0]); right.reset(inputs[1]); }
    // Generate SQL
    const CppIU* generate(CppWriter& out, const CppIU* next) override;
 };
@@ -199,7 +221,11 @@ class GroupBy : public Operator, public AggregationLike {
    GroupBy(std::unique_ptr<Operator> input, std::vector<Entry> groupBy, std::vector<Aggregation> aggregates);
 
    // Get the IUs
-   std::vector<const IU*> getIUs() const override { return util::combine(left->getIUs(), right->getIUs()); }
+   std::vector<const IU*> getIUs() const override { return util::combine(input->getIUs(), util::map<const IU*>(groupBy, [&](const Entry& e) { return e.iu.get(); }), util::map<const IU*>(aggregates, [&](const Aggregation& a) { return a.iu.get(); })); }
+   // Get the inputs
+   std::vector<Operator*> getInputs() override { return { input.get() }; }
+   // Set the inputs
+   void setInputs(const std::vector<Operator*>& inputs) override { input.reset(inputs[0]); }
    // Generate SQL
    const CppIU* generate(CppWriter& out, const CppIU* next) override;
 };
@@ -227,6 +253,12 @@ class Sort : public Operator {
    /// Constructor
    Sort(std::unique_ptr<Operator> input, std::vector<Entry> order, std::optional<uint64_t> limit, std::optional<uint64_t> offset);
 
+   // Get the IUs
+   std::vector<const IU*> getIUs() const override { return input->getIUs(); }
+   // Get the inputs
+   std::vector<Operator*> getInputs() override { return { input.get() }; }
+   // Set the inputs
+   void setInputs(const std::vector<Operator*>& inputs) override { input.reset(inputs[0]); }
    // Generate SQL
    const CppIU* generate(CppWriter& out, const CppIU* next) override;
 };
