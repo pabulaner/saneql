@@ -1,50 +1,64 @@
 #include "Optimizer.hpp"
 
+#include "OperatorUtil.hpp"
+
 namespace adapter {
 
 void Optimizer::pushDownPredicates() {
-    forEach<Select>(tree, [&](Select* value) {
-        std::vector<Expression*> required = getRequiredConditions(value->condition.get());
+    outil::forEach<Select>(tree.get(), [&](Select* select) {
+        std::vector<std::unique_ptr<Expression>> required = cutil::splitRequired(std::move(select->condition));
 
-        for (auto exp : required) {
-            Operator* target;
-            // check if predicate may be pushed down to target
-            if ((target = getOperatorForIUs(exp->getIUs())) && target != value->input.get()) { 
-                Operator* output = getOutputOperator(target);
-                Select* select = dynamic_cast<Select*>(output);
+        for (size_t i = 0; i < required.size(); i++) {
+            Operator* op = outil::getIUOperator(tree.get(), required[i]->getIUs());
+            tree = outil::insertSelectIfNotPresent(std::move(tree), op);
 
-                // check if output operator already is a predicate and if not, create and add the predicate as output
-                if (!select) {
-                    std::vector<Operator*> inputs = output->getInputs();
-                    util::replace(&inputs, target, predicate);
-                    output->setInputs(inputs);
-                }
-            }
+            // cast is valid as a select statement was inserted after op
+            Select* insertedSelect = (Select*) outil::getOutputOperator(tree.get(), op);
+            insertedSelect->condition = cutil::combineRequired({std::move(insertedSelect->condition), std::move(required[i])});
+
+            required.erase(required.begin() + (i--));
+        }
+
+        if (required.size() > 0) {
+            select->condition = cutil::combineRequired(&required);
+        } else {
+            tree = outil::removeSelect(std::move(tree), select);
         }
 
         return true;
     });
 }
 
-Operator* Optimizer::getOutputOperator(Operator* op) const {
-    Operator* result = nullptr;
-
-    forEach<Operator>(tree, [&](Operator* value) {
-        if (value == op) {
-            return false;
-        }
-
-        for (auto input : value->getInputs()) {
-            if (input == op) {
-                result = value;
-                return false;
-            }
-        }
+void Optimizer::makeIndexJoins() {
+    outil::forEach<Join>(tree.get(), [&](Join* join) {
+        
+        cutil::EqualBinaryExpressionData data = cutil::extractEqualBinaryExpressionPairs(tree.get(), std::move(join->condition));
+        
 
         return true;
     });
+}
 
-    return result;
+std::vector<IndexJoin::Pair> Optimizer::getIndexJoinIUs(Join* join, Operator* joinInput, const cutil::EqualBinaryExpressionData& data) const {
+    TableScan* scan = dynamic_cast<TableScan*>(joinInput);
+    std::vector<IndexJoin::Pair> result;
+
+    if (!scan) {
+        return result;
+    }
+
+    for (auto& p : data.pairs) {
+        if (scan->isKey(p.first))
+            result.push_back({p.first, p.second});
+        if (scan->isKey(p.second))
+            result.push_back({p.second, p.first});
+    }
+
+    if (result.size() == scan->getKeyCount()) {
+        return result;
+    }
+    
+    return {};
 }
 
 }

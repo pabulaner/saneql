@@ -80,6 +80,22 @@ class TableScan : public Operator {
    /// Constructor
    TableScan(std::string name, std::vector<Column> columns);
 
+   // Get is key
+   bool isKey(const IU* iu) const {
+      for (auto& c : columns) {
+         if (c.isKey && c.iu.get() == iu) 
+            return true;
+      }
+      return false;
+   }
+   // Get key count
+   size_t getKeyCount() const {
+      size_t count = 0;
+      for (auto& c : columns) {
+         count += c.isKey ? 1 : 0;
+      }
+      return count;
+   }
    // Get the IUs
    std::vector<const IU*> getIUs() const override { return util::map<const IU*>(columns, [&](const Column& c) { return c.iu.get(); }); }
 
@@ -202,6 +218,41 @@ class Join : public Operator {
    std::vector<Operator*> getInputs() override { return { left.get(), right.get() }; }
    // Set the inputs
    void setInputs(const std::vector<Operator*>& inputs) override { left.reset(inputs[0]); right.reset(inputs[1]); }
+   // Generate SQL
+   const CppIU* generate(CppWriter& out, const CppIU* next) override;
+
+   friend class adapter::Optimizer;
+};
+//---------------------------------------------------------------------------
+/// A index join operator
+class IndexJoin : public Operator {
+   public:
+   /// A index join pair
+   struct Pair {
+      /// The index IU
+      const IU* index;
+      /// The other IU to compare the index to
+      const IU* other;
+   };
+
+   private:
+   /// The index input
+   std::unique_ptr<TableScan> index;
+   /// The other input
+   std::unique_ptr<Operator> other;
+   /// The index pairs
+   std::vector<Pair> pairs;
+
+   public:
+   /// Constructor
+   IndexJoin(std::unique_ptr<TableScan> index, std::unique_ptr<Operator> other, std::vector<Pair> pairs);
+
+   // Get the IUs
+   std::vector<const IU*> getIUs() const override { return util::combine(index->getIUs(), other->getIUs()); }
+   // Get the inputs
+   std::vector<Operator*> getInputs() override { return { index.get(), other.get() }; }
+   // Set the inputs
+   void setInputs(const std::vector<Operator*>& inputs) override { index.reset(dynamic_cast<TableScan*>(inputs[0])); other.reset(inputs[1]); }
    // Generate SQL
    const CppIU* generate(CppWriter& out, const CppIU* next) override;
 };

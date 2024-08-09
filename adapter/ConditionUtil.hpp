@@ -25,7 +25,7 @@ struct EqualBinaryExpressionData {
 std::vector<std::unique_ptr<Expression>> splitRequired(std::unique_ptr<Expression> condition);
 
 // Combines the provided required conditions into one condition that is connected with AND
-std::unique_ptr<Expression> combineRequired(const std::vector<std::unique_ptr<Expression>>& required);
+std::unique_ptr<Expression> combineRequired(std::vector<std::unique_ptr<Expression>>* required);
 
 // Extracts the pairs of IUs that are compared with each other for equality and that are required for the condition to be true
 EqualBinaryExpressionData extractEqualBinaryExpressionPairs(Operator* tree, std::unique_ptr<Expression> condition);
