@@ -33,74 +33,74 @@ void Schema::createTable(std::string name, std::initializer_list<Column> columns
 void Schema::createTPCH()
 // Create the TPC-H schema for experiments
 {
-   createTable("part", {
-      {"p_partkey", Type::getInteger()}, 
+   createTable("part_tpch", {
+      {"p_partkey", Type::getInteger(), true}, 
       {"p_name", Type::getVarchar(55)}, 
-      {"p_mfgr", Type::getChar(25)}, 
-      {"p_brand", Type::getChar(10)}, 
+      {"p_mfgr", Type::getVarchar(25)}, 
+      {"p_brand", Type::getVarchar(10)}, 
       {"p_type", Type::getVarchar(25)}, 
       {"p_size", Type::getInteger()}, 
-      {"p_container", Type::getChar(10)}, 
-      {"p_retailprice", Type::getDecimal(12, 2)}, 
+      {"p_container", Type::getVarchar(10)}, 
+      {"p_retailprice", Type::getDecimal(0, 0)}, 
       {"p_comment", Type::getVarchar(23)}});
-   createTable("region", {
-      {"r_regionkey", Type::getInteger()}, 
-      {"r_name", Type::getChar(25)}, 
+   createTable("region_tpch", {
+      {"r_regionkey", Type::getInteger(), true}, 
+      {"r_name", Type::getVarchar(25)}, 
       {"r_comment", Type::getVarchar(152)}});
-   createTable("nation", {
-      {"n_nationkey", Type::getInteger()}, 
-      {"n_name", Type::getChar(25)}, 
+   createTable("nation_tpch", {
+      {"n_nationkey", Type::getInteger(), true}, 
+      {"n_name", Type::getVarchar(25)}, 
       {"n_regionkey", Type::getInteger()}, 
       {"n_comment", Type::getVarchar(152)}});
-   createTable("supplier", {
-      {"s_suppkey", Type::getInteger()}, 
-      {"s_name", Type::getChar(25)}, 
+   createTable("supplier_tpch", {
+      {"s_suppkey", Type::getInteger(), true}, 
+      {"s_name", Type::getVarchar(25)}, 
       {"s_address", Type::getVarchar(40)}, 
       {"s_nationkey", Type::getInteger()}, 
-      {"s_phone", Type::getChar(15)}, 
-      {"s_acctbal", Type::getDecimal(12, 2)}, 
+      {"s_phone", Type::getVarchar(15)}, 
+      {"s_acctbal", Type::getDecimal(0, 0)}, 
       {"s_comment", Type::getVarchar(101)}});
-   createTable("partsupp", {
-      {"ps_partkey", Type::getInteger()}, 
+   createTable("partsupp_tpch", {
+      {"ps_partkey", Type::getInteger(), true}, 
       {"ps_suppkey", Type::getInteger()}, 
       {"ps_availqty", Type::getInteger()}, 
-      {"ps_supplycost", Type::getDecimal(12, 2)}, 
+      {"ps_supplycost", Type::getDecimal(0, 0)}, 
       {"ps_comment", Type::getVarchar(199)}});
-   createTable("customer", {
-      {"c_custkey", Type::getInteger()}, 
+   createTable("customer_tpch", {
+      {"c_custkey", Type::getInteger(), true}, 
       {"c_name", Type::getVarchar(25)}, 
       {"c_address", Type::getVarchar(40)}, 
       {"c_nationkey", Type::getInteger()}, 
-      {"c_phone", Type::getChar(15)}, 
-      {"c_acctbal", Type::getDecimal(12, 2)}, 
-      {"c_mktsegment", Type::getChar(10)}, 
+      {"c_phone", Type::getVarchar(15)}, 
+      {"c_acctbal", Type::getDecimal(0, 0)}, 
+      {"c_mktsegment", Type::getVarchar(10)}, 
       {"c_comment", Type::getVarchar(117)}});
-   createTable("orders", {
-      {"o_orderkey", Type::getInteger()}, 
+   createTable("orders_tpch", {
+      {"o_orderkey", Type::getInteger(), true}, 
       {"o_custkey", Type::getInteger()}, 
-      {"o_orderstatus", Type::getChar(1)}, 
-      {"o_totalprice", Type::getDecimal(12, 2)}, 
+      {"o_orderstatus", Type::getVarchar(1)}, 
+      {"o_totalprice", Type::getDecimal(0, 0)}, 
       {"o_orderdate", Type::getDate()}, 
-      {"o_orderpriority", Type::getChar(15)}, 
-      {"o_clerk", Type::getChar(15)}, 
+      {"o_orderpriority", Type::getVarchar(15)}, 
+      {"o_clerk", Type::getVarchar(15)}, 
       {"o_shippriority", Type::getInteger()}, 
       {"o_comment", Type::getVarchar(79)}});
-   createTable("lineitem", {
-      {"l_orderkey", Type::getInteger()}, 
+   createTable("lineitem_tpch", {
+      {"l_orderkey", Type::getInteger(), true}, 
       {"l_partkey", Type::getInteger()}, 
       {"l_suppkey", Type::getInteger()}, 
       {"l_linenumber", Type::getInteger()}, 
-      {"l_quantity", Type::getDecimal(12, 2)}, 
-      {"l_extendedprice", Type::getDecimal(12, 2)}, 
-      {"l_discount", Type::getDecimal(12, 2)}, 
-      {"l_tax", Type::getDecimal(12, 2)}, 
-      {"l_returnflag", Type::getChar(1)}, 
-      {"l_linestatus", Type::getChar(1)}, 
+      {"l_quantity", Type::getDecimal(0, 0)}, 
+      {"l_extendedprice", Type::getDecimal(0, 0)}, 
+      {"l_discount", Type::getDecimal(0, 0)}, 
+      {"l_tax", Type::getDecimal(0, 0)}, 
+      {"l_returnflag", Type::getVarchar(1)}, 
+      {"l_linestatus", Type::getVarchar(1)}, 
       {"l_shipdate", Type::getDate()}, 
       {"l_commitdate", Type::getDate()}, 
       {"l_receiptdate", Type::getDate()}, 
-      {"l_shipinstruct", Type::getChar(25)}, 
-      {"l_shipmode", Type::getChar(10)}, 
+      {"l_shipinstruct", Type::getVarchar(25)}, 
+      {"l_shipmode", Type::getVarchar(10)}, 
       {"l_comment", Type::getVarchar(44)}});
 }
 //---------------------------------------------------------------------------
