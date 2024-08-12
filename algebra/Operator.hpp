@@ -1,14 +1,13 @@
 #ifndef H_saneql_Operator
 #define H_saneql_Operator
 //---------------------------------------------------------------------------
-#include "adapter/Util.hpp"
-#include "adapter/IUStorage.hpp"
-#include "adapter/p2c/foundations.hpp"
+#include "adapter/VectorUtil.hpp"
 #include "algebra/Expression.hpp"
 #include "infra/Schema.hpp"
 #include <memory>
 #include <optional>
 #include <vector>
+#include <functional>
 //---------------------------------------------------------------------------
 // SaneQL
 // (c) 2023 Thomas Neumann
@@ -49,7 +48,7 @@ class Operator {
    // Get the IUs
    virtual std::vector<const IU*> getIUs() const { return {}; };
    // Generate SQL
-   virtual std::unique_ptr<p2c::Operator> generate(IUStorage& s) = 0;
+   virtual void generate(CppWriter& out, std::function<void()> consume) = 0;
 };
 //---------------------------------------------------------------------------
 /// A table scan operator
@@ -76,9 +75,9 @@ class TableScan : public Operator {
    TableScan(std::string name, std::vector<Column> columns);
 
    // Get the IUs
-   std::vector<const IU*> getIUs() const override { return util::map<const IU*>(columns, [](const Column& c) { return c.iu.get(); }); }
+   std::vector<const IU*> getIUs() const override { return vutil::map<const IU*>(columns, [](const Column& c) { return c.iu.get(); }); }
    // Generate SQL
-   std::unique_ptr<p2c::Operator> generate(IUStorage& s) override;
+   void generate(CppWriter& out, std::function<void()> consume) override;
 };
 //---------------------------------------------------------------------------
 /// A select operator
@@ -95,7 +94,7 @@ class Select : public Operator {
    // Get the IUs
    std::vector<const IU*> getIUs() const override { return input->getIUs(); }
    // Generate SQL
-   std::unique_ptr<p2c::Operator> generate(IUStorage& s) override;
+   void generate(CppWriter& out, std::function<void()> consume) override;
 };
 //---------------------------------------------------------------------------
 /// A map operator
@@ -116,7 +115,7 @@ class Map : public Operator {
    // Get the IUs
    std::vector<const IU*> getIUs() const override { return input->getIUs(); }
    // Generate SQL
-   std::unique_ptr<p2c::Operator> generate(IUStorage& s) override;
+   void generate(CppWriter& out, std::function<void()> consume) override;
 };
 //---------------------------------------------------------------------------
 /// A set operation operator
@@ -147,7 +146,7 @@ class SetOperation : public Operator {
    SetOperation(std::unique_ptr<Operator> left, std::unique_ptr<Operator> right, std::vector<std::unique_ptr<Expression>> leftColumns, std::vector<std::unique_ptr<Expression>> rightColumns, std::vector<std::unique_ptr<IU>> resultColumns, Op op);
 
    // Generate SQL
-   std::unique_ptr<p2c::Operator> generate(IUStorage& s) override;
+   void generate(CppWriter& out, std::function<void()> consume) override;
 };
 //---------------------------------------------------------------------------
 /// A join operator
@@ -181,9 +180,9 @@ class Join : public Operator {
    JoinType getJoinType() const { return joinType; }
 
    // Get the IUs
-   std::vector<const IU*> getIUs() const override { return util::combine(left->getIUs(), right->getIUs()); }
+   std::vector<const IU*> getIUs() const override { return vutil::combine(left->getIUs(), right->getIUs()); }
    // Generate SQL
-   std::unique_ptr<p2c::Operator> generate(IUStorage& s) override;
+   void generate(CppWriter& out, std::function<void()> consume) override;
 };
 //---------------------------------------------------------------------------
 /// A group by operator
@@ -201,9 +200,9 @@ class GroupBy : public Operator, public AggregationLike {
    GroupBy(std::unique_ptr<Operator> input, std::vector<Entry> groupBy, std::vector<Aggregation> aggregates);
 
    // Get the IUs
-   std::vector<const IU*> getIUs() const override { return util::combine(util::map<const IU*>(groupBy, [](auto& value) { return value.iu.get(); }), util::map<const IU*>(aggregates, [](auto& value) { return value.iu.get(); })); }
+   std::vector<const IU*> getIUs() const override { return vutil::combine(vutil::map<const IU*>(groupBy, [](auto& value) { return value.iu.get(); }), vutil::map<const IU*>(aggregates, [](auto& value) { return value.iu.get(); })); }
    // Generate SQL
-   std::unique_ptr<p2c::Operator> generate(IUStorage& s) override;
+   void generate(CppWriter& out, std::function<void()> consume) override;
 };
 //---------------------------------------------------------------------------
 /// A sort operator
@@ -230,7 +229,7 @@ class Sort : public Operator {
    Sort(std::unique_ptr<Operator> input, std::vector<Entry> order, std::optional<uint64_t> limit, std::optional<uint64_t> offset);
 
    // Generate SQL
-   std::unique_ptr<p2c::Operator> generate(IUStorage& s) override;
+   void generate(CppWriter& out, std::function<void()> consume) override;
 };
 //---------------------------------------------------------------------------
 /// A window operator
@@ -253,7 +252,7 @@ class Window : public Operator, public AggregationLike {
    Window(std::unique_ptr<Operator> input, std::vector<Aggregation> aggregates, std::vector<std::unique_ptr<Expression>> partitionBy, std::vector<Sort::Entry> orderBy);
 
    // Generate SQL
-   std::unique_ptr<p2c::Operator> generate(IUStorage& s) override;
+   void generate(CppWriter& out, std::function<void()> consume) override;
 };
 //---------------------------------------------------------------------------
 /// An inline table definition
@@ -271,7 +270,7 @@ class InlineTable : public Operator {
    InlineTable(std::vector<std::unique_ptr<algebra::IU>> columns, std::vector<std::unique_ptr<algebra::Expression>> values, unsigned rowCount);
 
    // Generate SQL
-   std::unique_ptr<p2c::Operator> generate(IUStorage& s) override;
+   void generate(CppWriter& out, std::function<void()> consume) override;
 };
 //---------------------------------------------------------------------------
 }

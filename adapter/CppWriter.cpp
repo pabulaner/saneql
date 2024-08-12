@@ -3,23 +3,17 @@
 
 namespace adapter {
 
-const CppIU* CppWriter::createCppIU(CppIU::Type type) {
-    cppIUs.push_back(std::make_unique<CppIU>(type, "c_" + std::to_string(cppIUs.size() + 1)));
-    return cppIUs[cppIUs.size() - 1].get();
-}
-
 void CppWriter::write(const std::string& content) {
-    auto& writer = *(targetStack.top());
     if (content.starts_with('}') && tabCount > 0) {
         tabCount -= 1;
     }
-    if (writer.ends_with('\n')) {
+    if (result.ends_with('\n')) {
         writeTabs();
     }
 
-    writer += content;
+    result += content;
 
-    if (writer.ends_with("{\n")) {
+    if (result.ends_with("{\n")) {
         tabCount += 1;
     }
 }
@@ -28,13 +22,9 @@ void CppWriter::writeln(const std::string& content) {
     write(content + '\n');
 }
 
-void CppWriter::writeTabs() const {
-    auto& writer = *(targetStack.top());
-    if (&writer == &iuResult) {
-        return;
-    }
+void CppWriter::writeTabs() {
     for (std::size_t i = 0; i < tabCount; i++) {
-        writer += '\t';
+        result += '\t';
     }
 }
 
@@ -52,91 +42,15 @@ void CppWriter::writeType(Type type) {
     }
 }
 
-void CppWriter::writeType(CppIU::Type type) {
-    using enum CppIU::Type;
-    
-    switch (type) {
-        case Struct: write("struct"); break;
-        case ScanOp: write("ScanOp"); break;
-        case SelectOp: write("SelectOp"); break;
-        case MapOp: write("MapOp"); break;
-        case JoinOp: write("JoinOp"); break;
-        case OutputOp: write("OutputOp"); break;
-    }
-}
-
-const CppIU* CppWriter::writeStruct(const std::vector<const IU*>& fields) {
-    saveTarget(&structResult);
-    const CppIU* iu = createCppIU(CppIU::Type::Struct);
-
-    writeType(iu->getType());
-    writeln(" " + iu->getName() + " {");
-
-    for (auto field : fields) {
-        writeType(field->getType());
-        write(" ");
-        writeIU(field);
-        writeln(";");
-    }   
-
-    writeln("};");
-
-    restoreTarget();
-    return iu;
-}
-
-const CppIU* CppWriter::writeOperator(CppIU::Type type, const std::vector<std::string>& params, std::function<void()> lambda) {
-    return writeTemplateOperator(type, {}, params, lambda);
-}
-
-const CppIU* CppWriter::writeTemplateOperator(CppIU::Type type, const std::vector<std::string>& templates, const std::vector<std::string>& params, const std::function<void()> lambda) {
-    saveTarget(&operatorResult);
-    const CppIU* iu = createCppIU(type);
-
-    writeType(type);
-
-    if (templates.size() > 0)
-        write("<");
-
+void CppWriter::writeTypes(const std::vector<Type>& types) {
     bool first = true;
-    for (auto& t : templates) {
+    for (auto& type : types) {
         if (first) 
             first = false;
         else
             write(", ");
-        write(t);
+        writeType(type);
     }
-
-    if (templates.size() > 0)
-        write(">");
-
-    write(" " + iu->getName() + "(");
-
-    first = true;
-    for (auto& p : params) {
-        if (first) 
-            first = false;
-        else
-            write(", ");
-        write(p);
-    }
-
-    if (!first) 
-        write(", ");
-
-    // produce lambda
-    lambda();
-
-    writeln(");");
-
-    restoreTarget();
-    return iu;
-}
-
-void CppWriter::writeProcess(const CppIU* opIU) {
-    saveTarget(&processResult);
-    writeln(opIU->getName() + ".process();");
-    restoreTarget();
 }
 
 void CppWriter::writeIU(const IU* iu) {
@@ -146,28 +60,35 @@ void CppWriter::writeIU(const IU* iu) {
         std::string name = "v_" + std::to_string(iuNames.size() + 1);
         write(name);
 
-        saveTarget(&iuResult);
-        writeType(iu->getType());
-        writeln(" " + name + ";");
-        restoreTarget();
-
         iuNames[iu] = move(name);
     }
 }
 
-std::string CppWriter::getResult() const {
-    return structResult
-        + iuResult
-        + operatorResult
-        + processResult;
+void CppWriter::writeIUs(const std::vector<const IU*>& ius) {
+    bool first = true;
+    for (auto iu : ius) {
+        if (first) 
+            first = false;
+        else
+            write(", ");
+        writeIU(iu);
+    }
 }
 
-void CppWriter::saveTarget(std::string* target) {
-    targetStack.push(target);
+void CppWriter::writeExpression(Expression* exp) {
+    exp->generateOperand(*this);
 }
 
-void CppWriter::restoreTarget() {
-    targetStack.pop();
+void CppWriter::writeExpressions(const std::vector<Expression*>& exp) {
+    bool first = true;
+    for (auto e : exp) {
+        if (first) 
+            first = false;
+        else
+            write(", ");
+        writeExpression(e);
+    }
 }
+
 
 } // namespace adapter

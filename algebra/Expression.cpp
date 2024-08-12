@@ -16,10 +16,12 @@ Expression::~Expression()
 {
 }
 //---------------------------------------------------------------------------
-std::string Expression::generateOperand(IUStorage& s)
+void Expression::generateOperand(CppWriter& out)
 // Generate SQL in a form that is suitable as operand
 {
-   return "(" + generate(s) + ")";
+   out.write("(");
+   generate(out);
+   out.write(")");
 }
 //---------------------------------------------------------------------------
 IURef::IURef(const IU* iu)
@@ -28,32 +30,35 @@ IURef::IURef(const IU* iu)
 {
 }
 //---------------------------------------------------------------------------
-std::string IURef::generate(IUStorage& s)
+void IURef::generate(CppWriter& out)
 // Generate SQL
 {
-   return s.get(iu)->varname;
+   out.writeIU(iu);
 }
 //---------------------------------------------------------------------------
-std::string ConstExpression::generate(IUStorage& s)
+void ConstExpression::generate(CppWriter& out)
 // Generate SQL
 {
    if (null) {
-      return "nullptr";
+      out.write("NULL");
    } else {
       auto type = getType();
       if ((type.getType() != Type::Char) && (type.getType() != Type::Varchar) && (type.getType() != Type::Text)) {
-         return value;
+         out.write(value);
       } else {
-         return "\"" + value + "\"";
+         out.write("\"" + value + "\"");
       }
    }
 }
 //---------------------------------------------------------------------------
-std::string CastExpression::generate(IUStorage& s)
+void CastExpression::generate(CppWriter& out)
 // Generate SQL
 {
-   // TODO: make cast
-   return input->generate(s);
+   out.write("cast(");
+   input->generate(out);
+   out.write(" as ");
+   out.writeType(getType());
+   out.write(")");
 }
 //---------------------------------------------------------------------------
 ComparisonExpression::ComparisonExpression(unique_ptr<Expression> left, unique_ptr<Expression> right, Mode mode, Collate collate)
@@ -62,22 +67,22 @@ ComparisonExpression::ComparisonExpression(unique_ptr<Expression> left, unique_p
 {
 }
 //---------------------------------------------------------------------------
-std::string ComparisonExpression::generate(IUStorage& s)
+void ComparisonExpression::generate(CppWriter& out)
 // Generate SQL
 {
-   std::string result = left->generateOperand(s);
+   left->generateOperand(out);
    switch (mode) {
-      case Mode::Equal: result += " == "; break;
-      case Mode::NotEqual: result += " != "; break;
-      case Mode::Is: result += " is not distinct from "; break;
-      case Mode::IsNot: result += " is distinct from "; break;
-      case Mode::Less: result += " < "; break;
-      case Mode::LessOrEqual: result += " <= "; break;
-      case Mode::Greater: result += " > "; break;
-      case Mode::GreaterOrEqual: result += " >= "; break;
-      case Mode::Like: result += " like "; break;
+      case Mode::Equal: out.write(" == "); break;
+      case Mode::NotEqual: out.write(" != "); break;
+      case Mode::Is: out.write(" is not distinct from "); break;
+      case Mode::IsNot: out.write(" is distinct from "); break;
+      case Mode::Less: out.write(" < "); break;
+      case Mode::LessOrEqual: out.write(" <= "); break;
+      case Mode::Greater: out.write(" > "); break;
+      case Mode::GreaterOrEqual: out.write(" >= "); break;
+      case Mode::Like: out.write(" like "); break;
    }
-   return result + right->generateOperand(s);
+   right->generateOperand(out);
 }
 //---------------------------------------------------------------------------
 BetweenExpression::BetweenExpression(unique_ptr<Expression> base, unique_ptr<Expression> lower, unique_ptr<Expression> upper, Collate collate)
@@ -86,10 +91,14 @@ BetweenExpression::BetweenExpression(unique_ptr<Expression> base, unique_ptr<Exp
 {
 }
 //---------------------------------------------------------------------------
-std::string BetweenExpression::generate(IUStorage& s)
+void BetweenExpression::generate(CppWriter& out)
 // Generate SQL
 {
-   return "";
+   base->generateOperand(out);
+   out.write(" between ");
+   lower->generateOperand(out);
+   out.write(" and ");
+   upper->generateOperand(out);
 }
 //---------------------------------------------------------------------------
 InExpression::InExpression(unique_ptr<Expression> probe, vector<unique_ptr<Expression>> values, Collate collate)
@@ -98,10 +107,20 @@ InExpression::InExpression(unique_ptr<Expression> probe, vector<unique_ptr<Expre
 {
 }
 //---------------------------------------------------------------------------
-std::string InExpression::generate(IUStorage& s)
+void InExpression::generate(CppWriter& out)
 // Generate SQL
 {
-   return "";
+   probe->generateOperand(out);
+   out.write(" in (");
+   bool first = true;
+   for (auto& v : values) {
+      if (first)
+         first = false;
+      else
+         out.write(", ");
+      v->generate(out);
+   }
+   out.write(")");
 }
 //---------------------------------------------------------------------------
 BinaryExpression::BinaryExpression(unique_ptr<Expression> left, unique_ptr<Expression> right, Type resultType, Operation op)
@@ -110,22 +129,22 @@ BinaryExpression::BinaryExpression(unique_ptr<Expression> left, unique_ptr<Expre
 {
 }
 //---------------------------------------------------------------------------
-std::string BinaryExpression::generate(IUStorage& s)
+void BinaryExpression::generate(CppWriter& out)
 // Generate SQL
 {
-   std::string result = left->generateOperand(s);
+   left->generateOperand(out);
    switch (op) {
-      case Operation::Plus: result += " + "; break;
-      case Operation::Minus: result += " - "; break;
-      case Operation::Mul: result += " * "; break;
-      case Operation::Div: result += " / "; break;
-      case Operation::Mod: result += " % "; break;
-      case Operation::Power: result += " ^ "; break;
-      case Operation::Concat: result += " + "; break;
-      case Operation::And: result += " && "; break;
-      case Operation::Or: result += " || "; break;
+      case Operation::Plus: out.write(" + "); break;
+      case Operation::Minus: out.write(" - "); break;
+      case Operation::Mul: out.write(" * "); break;
+      case Operation::Div: out.write(" / "); break;
+      case Operation::Mod: out.write(" % "); break;
+      case Operation::Power: out.write(" ^ "); break;
+      case Operation::Concat: out.write(" || "); break;
+      case Operation::And: out.write(" and "); break;
+      case Operation::Or: out.write(" or "); break;
    }
-   return result + right->generateOperand(s);
+   right->generateOperand(out);
 }
 //---------------------------------------------------------------------------
 UnaryExpression::UnaryExpression(unique_ptr<Expression> input, Type resultType, Operation op)
@@ -134,16 +153,15 @@ UnaryExpression::UnaryExpression(unique_ptr<Expression> input, Type resultType, 
 {
 }
 //---------------------------------------------------------------------------
-std::string UnaryExpression::generate(IUStorage& s)
+void UnaryExpression::generate(CppWriter& out)
 // Generate SQL
 {
-   std::string result;
    switch (op) {
-      case Operation::Plus: result += "+"; break;
-      case Operation::Minus: result += "-"; break;
-      case Operation::Not: result += "!"; break;
+      case Operation::Plus: out.write("+"); break;
+      case Operation::Minus: out.write("-"); break;
+      case Operation::Not: out.write(" not "); break;
    }
-   return result + input->generateOperand(s);
+   input->generateOperand(out);
 }
 //---------------------------------------------------------------------------
 ExtractExpression::ExtractExpression(unique_ptr<Expression> input, Part part)
@@ -152,10 +170,18 @@ ExtractExpression::ExtractExpression(unique_ptr<Expression> input, Part part)
 {
 }
 //---------------------------------------------------------------------------
-std::string ExtractExpression::generate(IUStorage& s)
+void ExtractExpression::generate(CppWriter& out)
 // Generate SQL
 {
-   return "";
+   out.write("extract(");
+   switch (part) {
+      case Part::Year: out.write("year"); break;
+      case Part::Month: out.write("month"); break;
+      case Part::Day: out.write("day"); break;
+   }
+   out.write(" from ");
+   input->generateOperand(out);
+   out.write(")");
 }
 //---------------------------------------------------------------------------
 SubstrExpression::SubstrExpression(unique_ptr<Expression> value, unique_ptr<Expression> from, unique_ptr<Expression> len)
@@ -164,10 +190,20 @@ SubstrExpression::SubstrExpression(unique_ptr<Expression> value, unique_ptr<Expr
 {
 }
 //---------------------------------------------------------------------------
-std::string SubstrExpression::generate(IUStorage& s)
+void SubstrExpression::generate(CppWriter& out)
 // Generate SQL
 {
-   return "";
+   out.write("substring(");
+   value->generate(out);
+   if (from) {
+      out.write(" from ");
+      from->generate(out);
+   }
+   if (len) {
+      out.write(" for ");
+      len->generate(out);
+   }
+   out.write(")");
 }
 //---------------------------------------------------------------------------
 SimpleCaseExpression::SimpleCaseExpression(unique_ptr<Expression> value, Cases cases, unique_ptr<Expression> defaultValue)
@@ -176,10 +212,20 @@ SimpleCaseExpression::SimpleCaseExpression(unique_ptr<Expression> value, Cases c
 {
 }
 //---------------------------------------------------------------------------
-std::string SimpleCaseExpression::generate(IUStorage& s)
+void SimpleCaseExpression::generate(CppWriter& out)
 // Generate SQL
 {
-   return "";
+   out.write("case ");
+   value->generateOperand(out);
+   for (auto& c : cases) {
+      out.write(" when ");
+      c.first->generate(out);
+      out.write(" then ");
+      c.second->generate(out);
+   }
+   out.write(" else ");
+   defaultValue->generate(out);
+   out.write(" end");
 }
 //---------------------------------------------------------------------------
 SearchedCaseExpression::SearchedCaseExpression(Cases cases, unique_ptr<Expression> defaultValue)
@@ -188,10 +234,19 @@ SearchedCaseExpression::SearchedCaseExpression(Cases cases, unique_ptr<Expressio
 {
 }
 //---------------------------------------------------------------------------
-std::string SearchedCaseExpression::generate(IUStorage& s)
+void SearchedCaseExpression::generate(CppWriter& out)
 // Generate SQL
 {
-   return "";
+   out.write("case");
+   for (auto& c : cases) {
+      out.write(" when ");
+      c.first->generate(out);
+      out.write(" then ");
+      c.second->generate(out);
+   }
+   out.write(" else ");
+   defaultValue->generate(out);
+   out.write(" end");
 }
 //---------------------------------------------------------------------------
 Aggregate::Aggregate(unique_ptr<Operator> input, vector<Aggregation> aggregates, unique_ptr<Expression> computation)
@@ -200,10 +255,44 @@ Aggregate::Aggregate(unique_ptr<Operator> input, vector<Aggregation> aggregates,
 {
 }
 //---------------------------------------------------------------------------
-std::string Aggregate::generate(IUStorage& s)
+void Aggregate::generate(CppWriter& out)
 // Generate SQL
 {
-   return "";
+   out.write("(select ");
+   computation->generate(out);
+   if (!aggregates.empty()) {
+      out.write(" from (select ");
+      bool first = true;
+      for (auto& a : aggregates) {
+         if (first)
+            first = false;
+         else
+            out.write(", ");
+         switch (a.op) {
+            case Op::CountStar: out.write("count(*)"); break;
+            case Op::Count: out.write("count("); break;
+            case Op::CountDistinct: out.write("count(distinct "); break;
+            case Op::Sum: out.write("sum("); break;
+            case Op::SumDistinct: out.write("sum(distinct "); break;
+            case Op::Avg: out.write("avg("); break;
+            case Op::AvgDistinct: out.write("avg(distinct "); break;
+            case Op::Min: out.write("min("); break;
+            case Op::Max: out.write("max("); break;
+         }
+         if (a.op != Op::CountStar) {
+            a.value->generate(out);
+            out.write(")");
+         }
+         out.write(" as ");
+         out.writeIU(a.iu.get());
+      }
+      out.write(" from ");
+      // TODO: implement
+      // input->generate(out);
+      out.write(" s");
+      out.write(") s");
+   }
+   out.write(")");
 }
 //---------------------------------------------------------------------------
 ForeignCall::ForeignCall(string name, Type returnType, vector<unique_ptr<Expression>> arguments, CallType callType)
@@ -212,8 +301,51 @@ ForeignCall::ForeignCall(string name, Type returnType, vector<unique_ptr<Express
 {
 }
 //---------------------------------------------------------------------------
-std::string ForeignCall::generate(IUStorage& s) {
-   return "";
+void ForeignCall::generate(CppWriter& out) {
+   switch (callType) {
+      case CallType::Function: {
+         out.write(name);
+         out.write("(");
+         bool first = true;
+         for (auto& a : arguments) {
+            if(!std::exchange(first, false)) out.write(", ");
+            a->generate(out);
+         }
+         out.write(")");
+         break;
+      }
+      case CallType::LeftAssocOperator: { // ((a op b) op c) op d
+         for (auto i = 0u; i != arguments.size() - 2; ++i) {
+            out.write("(");
+         }
+         arguments[0]->generateOperand(out);
+         for (auto i = 1u; i != arguments.size(); ++i) {
+            out.write(" ");
+            out.write(name);
+            out.write(" ");
+            arguments[i]->generateOperand(out);
+            if (i != arguments.size() - 1) {
+               out.write(")");
+            }
+         }
+         break;
+      }
+      case CallType::RightAssocOperator: { // a op (b op (c op d))
+         for (auto i = 0u; i != arguments.size(); ++i) {
+            arguments[i]->generateOperand(out);
+            if (i != arguments.size() - 1) {
+               out.write(" ");
+               out.write(name);
+               out.write(" ");
+               out.write("(");
+            }
+         }
+         for (auto i = 0u; i != arguments.size() - 2; ++i) {
+            out.write(")");
+         }
+         break;
+      }
+   }
 }
 //---------------------------------------------------------------------------
 }

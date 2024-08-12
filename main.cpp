@@ -5,8 +5,7 @@
 #include "parser/SaneQLParser.hpp"
 #include "semana/SemanticAnalysis.hpp"
 #include "sql/SQLWriter.hpp"
-#include "adapter/p2c/foundations.hpp"
-#include "adapter/IUStorage.hpp"
+#include "adapter/CppWriter.hpp"
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -52,16 +51,17 @@ int main(int argc, char* argv[]) {
    SemanticAnalysis semana(schema);
    try {
       auto res = semana.analyzeQuery(tree);
-      IUStorage s;
+      CppWriter out;
 
       if (res.isScalar()) {
-         std::cout << res.scalar()->generate(s);
+         res.scalar()->generate(out);
       } else {
          auto tree = res.table().get();
-         auto op = tree->generate(s);
-         auto ius = op->availableIUs().v;
-
-         p2c::produceAndPrint(std::move(op), ius);
+         tree->generate(out, [&]() {
+            out.write("std::cout << ");
+            out.writeIUs(tree->getIUs());
+            out.writeln(" << std::endl;");
+         });
       }
    } catch (const exception& e) {
       cerr << e.what() << endl;

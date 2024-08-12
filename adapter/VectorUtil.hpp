@@ -5,7 +5,7 @@
 
 namespace adapter {
 
-namespace util {
+namespace vutil {
 
 template <typename T>
 bool contains(const std::vector<T>& vec, const T& value) {
@@ -34,6 +34,6 @@ std::vector<T> combine(const std::vector<T>& arg, const TArgs&... args) {
     return result;
 }
 
-} // namespace util
+} // namespace vutil
 
 } // namespace adapter

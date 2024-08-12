@@ -1,1 +1,3 @@
-warehouse.filter(w_name='e03gy9m').join(stock, w_id=s_w_id)
+warehouse
+.filter(w_name='e03gy9m')
+.join(stock, w_id=s_w_id)

@@ -1,6 +1,7 @@
 #include "algebra/Operator.hpp"
 #include "sql/SQLWriter.hpp"
 #include "adapter/CppWriter.hpp"
+#include "fmt/printf.h"
 //---------------------------------------------------------------------------
 // (c) 2023 Thomas Neumann
 //---------------------------------------------------------------------------
@@ -19,27 +20,22 @@ TableScan::TableScan(string name, vector<Column> columns)
 {
 }
 //---------------------------------------------------------------------------
-std::unique_ptr<p2c::Operator> TableScan::generate(IUStorage& s)
+void TableScan::generate(CppWriter& out, std::function<void()> consume)
 // Generate SQL
 {
-   std::vector<p2c::IU> keyIUs;
-   std::vector<p2c::IU> ius;
+   out.write("db->forEach([&](auto& key, auto& value) {");
 
    for (auto& c : columns) {
-      auto iu = p2c::IU{c.name, p2c::Type::Undefined};
-      if (c.isKey) 
-         keyIUs.push_back(iu);
-      else
-         ius.push_back(iu);
+      out.writeType(c.iu->getType());
+      out.write(" ");
+      out.writeIU(c.iu.get());
+      out.write(" = ");
+      out.write(c.isKey ? "key" : "value");
+      out.writeln("." + c.name + ";");
    }
+   consume();
 
-   auto op = std::make_unique<p2c::Scan>(name, keyIUs, ius);
-   
-   for (auto& c : columns) {
-      s.add(c.iu.get(), op->getIU(c.name));
-   }
-
-   return op;
+   out.writeln("});");
 }
 //---------------------------------------------------------------------------
 Select::Select(unique_ptr<Operator> input, unique_ptr<Expression> condition)
@@ -48,11 +44,16 @@ Select::Select(unique_ptr<Operator> input, unique_ptr<Expression> condition)
 {
 }
 //---------------------------------------------------------------------------
-std::unique_ptr<p2c::Operator> Select::generate(IUStorage& s)
+void Select::generate(CppWriter& out, std::function<void()> consume)
 // Generate SQL
 {
-   auto inOp = input->generate(s);
-   return std::make_unique<p2c::Selection>(std::move(inOp), condition->generate(s));
+   input->generate(out, [&]() {
+      out.write("if (");
+      out.writeExpression(condition.get());
+      out.writeln(") {");
+      consume();
+      out.writeln("}");
+   });
 }
 //---------------------------------------------------------------------------
 Map::Map(unique_ptr<Operator> input, vector<Entry> computations)
@@ -61,16 +62,20 @@ Map::Map(unique_ptr<Operator> input, vector<Entry> computations)
 {
 }
 //---------------------------------------------------------------------------
-std::unique_ptr<p2c::Operator> Map::generate(IUStorage& s)
+void Map::generate(CppWriter& out, std::function<void()> consume)
 // Generate SQL
 {
-   auto op = input->generate(s);
-   for (auto& c : computations) {
-      auto mapOp = std::make_unique<p2c::Map>(std::move(op), c.value->generate(s));
-      s.add(c.iu.get(), mapOp->getIU());
-      op = std::move(mapOp);
-   }
-   return op;
+   input->generate(out, [&]() {
+      for (auto& c : computations) {
+         out.writeType(c.iu->getType());
+         out.write(" ");
+         out.writeIU(c.iu.get());
+         out.write(" = ");
+         out.writeExpression(c.value.get());
+         out.writeln(";");
+      }
+      consume();
+   });
 }
 //---------------------------------------------------------------------------
 SetOperation::SetOperation(unique_ptr<Operator> left, unique_ptr<Operator> right, vector<unique_ptr<Expression>> leftColumns, vector<unique_ptr<Expression>> rightColumns, vector<unique_ptr<IU>> resultColumns, Op op)
@@ -79,10 +84,10 @@ SetOperation::SetOperation(unique_ptr<Operator> left, unique_ptr<Operator> right
 {
 }
 //---------------------------------------------------------------------------
-std::unique_ptr<p2c::Operator> SetOperation::generate(IUStorage& s)
+void SetOperation::generate(CppWriter& out, std::function<void()> consume)
 // Generate SQL
 {
-   return nullptr;
+   throw;
 }
 //---------------------------------------------------------------------------
 Join::Join(unique_ptr<Operator> left, unique_ptr<Operator> right, unique_ptr<Expression> condition, JoinType joinType)
@@ -91,32 +96,102 @@ Join::Join(unique_ptr<Operator> left, unique_ptr<Operator> right, unique_ptr<Exp
 {
 }
 //---------------------------------------------------------------------------
-std::unique_ptr<p2c::Operator> Join::generate(IUStorage& s)
+void Join::generate(CppWriter& out, std::function<void()> consume)
 // Generate SQL
 {
-   if (!condition->equiJoinProperty()) {
+   std::vector<const IU*> leftKeyIUs;
+   std::vector<const IU*> rightKeyIUs;
+
+   std::function<void(Expression*)> getKeyIUs = [&](Expression* exp) {
+      BinaryExpression* b = dynamic_cast<BinaryExpression*>(exp);
+      ComparisonExpression* c = dynamic_cast<ComparisonExpression*>(exp);
+
+      if (b && b->op == BinaryExpression::And) {
+         getKeyIUs(b->left.get());
+         getKeyIUs(b->right.get());
+
+         return;
+      }
+      if (c && c->mode == ComparisonExpression::Equal) {
+         IURef* l = dynamic_cast<IURef*>(c->left.get());
+         IURef* r = dynamic_cast<IURef*>(c->right.get());
+         auto leftIU = l->getIU();
+         auto rightIU = r->getIU();
+         auto leftIUs = left->getIUs();
+         auto rightIUs = right->getIUs();
+
+         if (l && r) {
+            if ((vutil::contains(leftIUs, leftIU) && vutil::contains(rightIUs, rightIU)) || (vutil::contains(leftIUs, rightIU) && vutil::contains(rightIUs, leftIU))) {
+               leftKeyIUs.push_back(leftIU);
+               rightKeyIUs.push_back(rightIU);
+
+               return;
+            }
+         }
+      }
+
       throw;
-   }
+   };
 
-   auto inLeftOp = left->generate(s);
-   auto inRightOp = right->generate(s);
+   getKeyIUs(condition.get());
 
-   std::vector<const IU*> ius = condition->getIUs();
-   std::vector<p2c::IU*> leftKeyIUs;
-   std::vector<p2c::IU*> rightKeyIUs;
+   std::vector<const IU*> leftPayloadIUs;
+   std::vector<const IU*> rightPayloadIUs;
 
    for (auto iu : left->getIUs()) {
-      if (std::find(ius.begin(), ius.end(), iu) != ius.end()) {
-         leftKeyIUs.push_back(s.get(iu));
+      if (!vutil::contains(leftKeyIUs, iu)) {
+         leftPayloadIUs.push_back(iu);
       }
    }
    for (auto iu : right->getIUs()) {
-      if (std::find(ius.begin(), ius.end(), iu) != ius.end()) {
-         rightKeyIUs.push_back(s.get(iu));
+      if (!vutil::contains(rightKeyIUs, iu)) {
+         rightPayloadIUs.push_back(iu);
       }
    }
 
-   return std::make_unique<p2c::HashJoin>(std::move(inLeftOp), std::move(inRightOp), leftKeyIUs, rightKeyIUs);
+   const IU mapIU{Type::getUnknown()};
+
+   out.write("std::unordered_multimap<std::tuple<");
+   out.writeTypes(vutil::map<Type>(leftKeyIUs, [](const IU* iu) { return iu->getType(); }));
+   out.write(">, std::tuple<");
+   out.writeTypes(vutil::map<Type>(leftPayloadIUs, [](const IU* iu) { return iu->getType(); }));
+   out.write(">> ");
+   out.writeIU(&mapIU);
+   out.writeln(";");
+
+   left->generate(out, [&]() {
+      out.writeIU(&mapIU);
+      out.write(".insert({");
+      out.writeIUs(leftKeyIUs);
+      out.write("}, {");
+      out.writeIUs(leftPayloadIUs);
+      out.writeln("});");
+   });
+   right->generate(out, [&]() {
+      out.write("for (auto& range = ");
+      out.writeIU(&mapIU);
+      out.write(".equal_range({");
+      out.writeIUs(rightKeyIUs);
+      out.writeln("}; range.first!=range.second; range.first++) {");
+
+      for (size_t i = 0; i < leftKeyIUs.size(); i++) {
+         auto iu = leftKeyIUs[i];
+         out.writeType(iu->getType());
+         out.write(" ");
+         out.writeIU(iu);
+         out.writeln(" = std::get<" + std::to_string(i) + ">(range.first->first);");
+      }
+      for (size_t i = 0; i < leftPayloadIUs.size(); i++) {
+         auto iu = leftPayloadIUs[i];
+         out.writeType(iu->getType());
+         out.write(" ");
+         out.writeIU(iu);
+         out.writeln(" = std::get<" + std::to_string(i) + ">(range.first->second);");
+      }
+
+      consume();
+      out.writeln("}");
+   });
 }
 //---------------------------------------------------------------------------
 GroupBy::GroupBy(unique_ptr<Operator> input, vector<Entry> groupBy, vector<Aggregation> aggregates)
@@ -125,30 +200,101 @@ GroupBy::GroupBy(unique_ptr<Operator> input, vector<Entry> groupBy, vector<Aggre
 {
 }
 //---------------------------------------------------------------------------
-std::unique_ptr<p2c::Operator> GroupBy::generate(IUStorage& s)
+void GroupBy::generate(CppWriter& out, std::function<void()> consume)
 // Generate SQL
 {
-   auto inOp = input->generate(s);
-   for (auto& g : groupBy) {
-      auto mapOp = std::make_unique<p2c::Map>(std::move(inOp), g.value->generate(s));
-      s.add(g.iu.get(), mapOp->getIU());
-      inOp = std::move(mapOp);
-   }
-   auto op = std::make_unique<p2c::GroupBy>(std::move(inOp), util::map<p2c::IU*>(groupBy, [&](const Entry& entry) { return s.get(entry.iu.get()); }));
-   
+   // validate
    for (auto& a : aggregates) {
-      p2c::IU* iu = s.get(a.iu.get());
-      std::vector<p2c::IU*> ius = s.get(a.value->getIUs());
-      std::string name = iu->varname;
-      std::string value = a.value->generateOperand(s);
       switch (a.op) {
-         case Op::Sum: op->addSum(name, ius, value); break;
-         case Op::Count: op->addCount(name); break;
-         case Op::Min: op->addMin(name, ius, value); break;
+         case Op::Sum:
+         case Op::Min:
+         case Op::Max:
+         case Op::Count: break;
+         default: throw;
       }
    }
 
-   return op;
+   const IU mapIU{Type::getUnknown()};
+
+   out.write("std::unordered_map<std::tuple<");
+   out.writeTypes(vutil::map<Type>(groupBy, [](const Entry& e) { return e.value->getType(); }));
+   out.write(">, std::tuple<");
+   out.writeTypes(vutil::map<Type>(aggregates, [](const Aggregation& a) { return a.value->getType(); }));
+   out.write(">> ");
+   out.writeIU(&mapIU);
+   out.writeln(";");
+
+   input->generate(out, [&]() {
+      out.write("auto& it = ");
+      out.writeIU(&mapIU);
+      out.write(".find({");
+      out.writeExpressions(vutil::map<Expression*>(groupBy, [](const Entry& e) { return e.value.get(); }));
+      out.writeln("};");
+
+      out.write("if (it == ");
+      out.writeIU(&mapIU);
+      out.writeln(".end()) {");
+
+      out.writeIU(&mapIU);
+      out.write(".insert({");
+      out.writeExpressions(vutil::map<Expression*>(groupBy, [](const Entry& e) { return e.value.get(); }));
+      out.write("}, {");
+
+      bool first = true;
+      for (auto& a : aggregates) {
+         if (first)
+            first = false;
+         else 
+            out.write(", ");
+
+         switch (a.op) {
+            case Op::Sum: 
+            case Op::Min: 
+            case Op::Max: out.writeExpression(a.value.get()); break;
+            case Op::Count: out.write("1"); break;
+         }
+      }
+
+      out.writeln("} else {");
+
+      for (size_t i = 0; i < aggregates.size(); i++) {
+         if (i > 0)
+            out.write(", ");
+
+         auto& a = aggregates[i];
+
+         out.write("std::get<" + std::to_string(i) + ">(it->second) ");
+         switch (a.op) {
+            case Op::Sum: out.write("+= "); out.writeExpression(a.value.get()); break;
+            case Op::Min: out.write("= std::min(get<" + std::to_string(i) + ">(it->second), "); out.writeExpression(a.value.get()); out.write(")"); break;
+            case Op::Max: out.write("= std::max(get<" + std::to_string(i) + ">(it->second), "); out.writeExpression(a.value.get()); out.write(")"); break;
+            case Op::Count: out.write("+= 1"); break;
+         }
+         out.writeln(";");
+      }
+
+      out.writeln("}");
+   });
+
+   out.write("for (auto& it = ");
+   out.writeIU(&mapIU);
+   out.writeln(") {");
+   for (size_t i = 0; i < groupBy.size(); i++) {
+         auto iu = groupBy[i].iu.get();
+         out.writeType(iu->getType());
+         out.write(" ");
+         out.writeIU(iu);
+         out.writeln(" = std::get<" + std::to_string(i) + ">(it.first);");
+   }
+   for (size_t i = 0; i < aggregates.size(); i++) {
+      auto iu = aggregates[i].iu.get();
+      out.writeType(iu->getType());
+      out.write(" ");
+      out.writeIU(iu);
+      out.writeln(" = std::get<" + std::to_string(i) + ">(it.second);");
+   }
+   consume();
+   out.writeln("}");
 }
 //---------------------------------------------------------------------------
 Sort::Sort(unique_ptr<Operator> input, vector<Entry> order, optional<uint64_t> limit, optional<uint64_t> offset)
@@ -157,11 +303,62 @@ Sort::Sort(unique_ptr<Operator> input, vector<Entry> order, optional<uint64_t> l
 {
 }
 //---------------------------------------------------------------------------
-std::unique_ptr<p2c::Operator> Sort::generate(IUStorage& s)
+void Sort::generate(CppWriter& out, std::function<void()> consume)
 // Generate SQL
 {
-   auto inOp = input->generate(s);
-   return std::make_unique<p2c::Sort>(std::move(inOp), util::map<std::string>(order, [&](const Entry& entry) { return entry.value->generate(s); }));
+   auto ius = input->getIUs();
+   const IU vecIU{Type::getUnknown()};
+
+   bool first = true;
+   out.write("std::vector<std::tuple<");
+   out.writeTypes(vutil::map<Type>(order, [&](const Entry& e) { first = false; return e.value->getType(); }));
+   for (auto iu : ius) {
+      if (first) 
+         first = false;
+      else 
+         out.write(", ");
+      out.writeType(iu->getType());
+   }
+   out.write(">> ");
+   out.writeIU(&vecIU);
+
+   input->generate(out, [&]() {
+      out.writeIU(&vecIU);
+      out.write(".push_back({");
+      out.writeExpressions(vutil::map<Expression*>(order, [&](const Entry& e) { first = false; return e.value.get(); }));
+      for (auto iu : input->getIUs()) {
+         if (first) 
+            first = false;
+         else 
+            out.write(", ");
+         out.writeIU(iu);
+      }
+      out.writeln("});");
+   });
+
+   out.write("sort(");
+   out.writeIU(&vecIU);
+   out.write(".begin(), ");
+   out.writeIU(&vecIU);
+   out.writeln(".end(), [](const auto& t1, const auto& t2) { return t1 < t2; });");
+
+   out.write("for (auto& t : ");
+   out.writeIU(&vecIU);
+   out.writeln(") {");
+   
+   for (size_t i = 0; i < ius.size(); i++) {
+      if (i > 0)
+         out.write(", ");
+
+      auto iu = ius[i];
+      out.writeType(iu->getType());
+      out.write(" ");
+      out.writeIU(iu);
+      out.writeln(" = std::get<" + std::to_string(order.size() + i) + ">(t);");
+   }
+   consume();
+
+   out.writeln("}");
 }
 //---------------------------------------------------------------------------
 Window::Window(unique_ptr<Operator> input, vector<Aggregation> aggregates, vector<unique_ptr<Expression>> partitionBy, vector<Sort::Entry> orderBy)
@@ -170,10 +367,10 @@ Window::Window(unique_ptr<Operator> input, vector<Aggregation> aggregates, vecto
 {
 }
 //---------------------------------------------------------------------------
-std::unique_ptr<p2c::Operator> Window::generate(IUStorage& s)
+void Window::generate(CppWriter& out, std::function<void()> consume)
 // Generate SQL
 {
-   return nullptr;
+   throw;
 }
 //---------------------------------------------------------------------------
 InlineTable::InlineTable(vector<unique_ptr<algebra::IU>> columns, vector<unique_ptr<algebra::Expression>> values, unsigned rowCount)
@@ -182,10 +379,10 @@ InlineTable::InlineTable(vector<unique_ptr<algebra::IU>> columns, vector<unique_
 {
 }
 //---------------------------------------------------------------------------
-std::unique_ptr<p2c::Operator> InlineTable::generate(IUStorage& s)
+void InlineTable::generate(CppWriter& out, std::function<void()> consume)
 // Generate SQL
 {
-   return nullptr;
+   throw;
 }
 //---------------------------------------------------------------------------
 }

@@ -11,6 +11,7 @@ namespace saneql {
 class Type;
 namespace algebra {
 class IU;
+class Expression;
 }
 }
 
@@ -51,58 +52,38 @@ class CppIU {
 };
 
 class CppWriter {
-    /// The target
-    std::stack<std::string*> targetStack;
-    /// The struct result
-    std::string structResult;
-    /// The IU result
-    std::string iuResult;
-    /// The operator result
-    std::string operatorResult;
-    /// The process result
-    std::string processResult;
+    /// The result
+    std::string result;
     /// The tab count
-    std::size_t tabCount;
+    size_t tabCount;
 
-    /// All struct and operator IU's
-    std::vector<std::unique_ptr<CppIU>> cppIUs;
     /// All assigned IU names
     std::unordered_map<const IU*, std::string> iuNames;
 
     public:
     /// The constructor
     CppWriter() : tabCount(0) {}
-    /// Create a cpp IU
-    const CppIU* createCppIU(CppIU::Type type);
     /// Write a string
     void write(const std::string& content);
     /// Write a string with a linebreak
     void writeln(const std::string& content);
     /// Write tabs
-    void writeTabs() const;
+    void writeTabs();
     /// Write type
     void writeType(Type type);
-    /// Write cpp type
-    void writeType(CppIU::Type type);
-    /// Write struct to structResult
-    const CppIU* writeStruct(const std::vector<const IU*>& fields);
-    /// Write operator to operatorResult
-    const CppIU* writeOperator(CppIU::Type type, const std::vector<std::string>& params, const std::function<void()> lambda);
-    /// Write template operator to operatorResult
-    const CppIU* writeTemplateOperator(CppIU::Type type, const std::vector<std::string>& templates, const std::vector<std::string>& params, const std::function<void()> lambda);
-    /// Write process
-    void writeProcess(const CppIU* opIU);
-    /// Write IU to operatorResult and declare it in iuResult
+    /// Write types
+    void writeTypes(const std::vector<Type>& types);
+    /// Write IU
     void writeIU(const IU* iu);
+    /// Write IUs
+    void writeIUs(const std::vector<const IU*>& ius);
+    /// Write expression
+    void writeExpression(Expression* exp);
+    /// Write expressions
+    void writeExpressions(const std::vector<Expression*>& exp);
 
     /// Get the final result
     std::string getResult() const;
-
-    private:
-    /// Save the target
-    void saveTarget(std::string* target);
-    /// Restore the target
-    void restoreTarget();
 };
 
 } // namespace adapter

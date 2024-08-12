@@ -17,7 +17,6 @@
 #include <sstream>
 #include "types.hpp"
 #include "tpch.hpp"
-#include "../Util.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -27,7 +26,7 @@ namespace p2c {
 
 using namespace std;
 using namespace fmt;
-using namespace adapter;
+// using namespace adapter;
 
 string genVar(const string& name);
 
