@@ -83,7 +83,7 @@ class CppWriter {
     void writeExpressions(const std::vector<Expression*>& exp);
 
     /// Get the final result
-    std::string getResult() const;
+    std::string getResult() const { return result; }
 };
 
 } // namespace adapter

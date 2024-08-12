@@ -4,10 +4,10 @@
 namespace adapter {
 
 void CppWriter::write(const std::string& content) {
-    if (content.starts_with('}') && tabCount > 0) {
-        tabCount -= 1;
-    }
     if (result.ends_with('\n')) {
+        if (content.starts_with('}') && tabCount > 0) {
+            tabCount -= 1;
+        }
         writeTabs();
     }
 
@@ -76,7 +76,7 @@ void CppWriter::writeIUs(const std::vector<const IU*>& ius) {
 }
 
 void CppWriter::writeExpression(Expression* exp) {
-    exp->generateOperand(*this);
+    exp->generate(*this);
 }
 
 void CppWriter::writeExpressions(const std::vector<Expression*>& exp) {

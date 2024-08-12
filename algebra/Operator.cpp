@@ -23,7 +23,7 @@ TableScan::TableScan(string name, vector<Column> columns)
 void TableScan::generate(CppWriter& out, std::function<void()> consume)
 // Generate SQL
 {
-   out.write("db->forEach([&](auto& key, auto& value) {");
+   out.writeln("db->" + name + ".forEach([&](auto& key, auto& value) {");
 
    for (auto& c : columns) {
       out.writeType(c.iu->getType());
@@ -102,6 +102,7 @@ void Join::generate(CppWriter& out, std::function<void()> consume)
    std::vector<const IU*> leftKeyIUs;
    std::vector<const IU*> rightKeyIUs;
 
+   // get key IUs and validate
    std::function<void(Expression*)> getKeyIUs = [&](Expression* exp) {
       BinaryExpression* b = dynamic_cast<BinaryExpression*>(exp);
       ComparisonExpression* c = dynamic_cast<ComparisonExpression*>(exp);
@@ -130,7 +131,7 @@ void Join::generate(CppWriter& out, std::function<void()> consume)
          }
       }
 
-      throw;
+      throw "Unsupported join condition";
    };
 
    getKeyIUs(condition.get());
@@ -161,18 +162,18 @@ void Join::generate(CppWriter& out, std::function<void()> consume)
 
    left->generate(out, [&]() {
       out.writeIU(&mapIU);
-      out.write(".insert({");
+      out.write(".insert({{");
       out.writeIUs(leftKeyIUs);
       out.write("}, {");
       out.writeIUs(leftPayloadIUs);
-      out.writeln("});");
+      out.writeln("}});");
    });
    right->generate(out, [&]() {
-      out.write("for (auto& range = ");
+      out.write("for (auto range = ");
       out.writeIU(&mapIU);
       out.write(".equal_range({");
       out.writeIUs(rightKeyIUs);
-      out.writeln("}; range.first!=range.second; range.first++) {");
+      out.writeln("}); range.first!=range.second; range.first++) {");
 
       for (size_t i = 0; i < leftKeyIUs.size(); i++) {
          auto iu = leftKeyIUs[i];
@@ -207,36 +208,55 @@ void GroupBy::generate(CppWriter& out, std::function<void()> consume)
    for (auto& a : aggregates) {
       switch (a.op) {
          case Op::Sum:
+         case Op::Avg:
          case Op::Min:
          case Op::Max:
-         case Op::Count: break;
-         default: throw;
+         case Op::CountStar: break;
+         default: throw "Unsupported groupby aggregation";
       }
    }
 
    const IU mapIU{Type::getUnknown()};
 
    out.write("std::unordered_map<std::tuple<");
-   out.writeTypes(vutil::map<Type>(groupBy, [](const Entry& e) { return e.value->getType(); }));
+   out.writeTypes(vutil::map<Type>(groupBy, [](const Entry& e) { return e.iu->getType(); }));
    out.write(">, std::tuple<");
-   out.writeTypes(vutil::map<Type>(aggregates, [](const Aggregation& a) { return a.value->getType(); }));
+
+   bool first = true;
+   for (auto& a : aggregates) {
+      if (first)
+         first = false;
+      else
+         out.write(", ");
+      
+      if (a.op == Op::Avg) {
+         out.write("std::pair<");
+         out.writeType(a.iu->getType());
+         out.write(", ");
+         out.writeType(Type::getInteger());
+         out.write(">");
+      } else {
+         out.writeType(a.iu->getType());
+      }
+   }
+
    out.write(">> ");
    out.writeIU(&mapIU);
    out.writeln(";");
 
    input->generate(out, [&]() {
-      out.write("auto& it = ");
+      out.write("auto it = ");
       out.writeIU(&mapIU);
       out.write(".find({");
       out.writeExpressions(vutil::map<Expression*>(groupBy, [](const Entry& e) { return e.value.get(); }));
-      out.writeln("};");
+      out.writeln("});");
 
       out.write("if (it == ");
       out.writeIU(&mapIU);
       out.writeln(".end()) {");
 
       out.writeIU(&mapIU);
-      out.write(".insert({");
+      out.write(".insert({{");
       out.writeExpressions(vutil::map<Expression*>(groupBy, [](const Entry& e) { return e.value.get(); }));
       out.write("}, {");
 
@@ -251,24 +271,25 @@ void GroupBy::generate(CppWriter& out, std::function<void()> consume)
             case Op::Sum: 
             case Op::Min: 
             case Op::Max: out.writeExpression(a.value.get()); break;
-            case Op::Count: out.write("1"); break;
+            case Op::Avg: out.write("{"); out.writeExpression(a.value.get()); out.write(", 1}"); break;
+            case Op::CountStar: out.write("1"); break;
          }
       }
 
+      out.writeln("}});");
       out.writeln("} else {");
 
       for (size_t i = 0; i < aggregates.size(); i++) {
-         if (i > 0)
-            out.write(", ");
-
+         std::string value = "std::get<" + std::to_string(i) + ">(it->second)";
          auto& a = aggregates[i];
 
-         out.write("std::get<" + std::to_string(i) + ">(it->second) ");
+         out.write(value + " ");
          switch (a.op) {
             case Op::Sum: out.write("+= "); out.writeExpression(a.value.get()); break;
             case Op::Min: out.write("= std::min(get<" + std::to_string(i) + ">(it->second), "); out.writeExpression(a.value.get()); out.write(")"); break;
             case Op::Max: out.write("= std::max(get<" + std::to_string(i) + ">(it->second), "); out.writeExpression(a.value.get()); out.write(")"); break;
-            case Op::Count: out.write("+= 1"); break;
+            case Op::Avg: out.write("= {" + value + ".first + "); out.writeExpression(a.value.get()); out.write(", " + value + ".second + 1}"); break;
+            case Op::CountStar: out.write("+= 1"); break;
          }
          out.writeln(";");
       }
@@ -276,7 +297,7 @@ void GroupBy::generate(CppWriter& out, std::function<void()> consume)
       out.writeln("}");
    });
 
-   out.write("for (auto& it = ");
+   out.write("for (auto& it : ");
    out.writeIU(&mapIU);
    out.writeln(") {");
    for (size_t i = 0; i < groupBy.size(); i++) {
@@ -287,11 +308,19 @@ void GroupBy::generate(CppWriter& out, std::function<void()> consume)
          out.writeln(" = std::get<" + std::to_string(i) + ">(it.first);");
    }
    for (size_t i = 0; i < aggregates.size(); i++) {
-      auto iu = aggregates[i].iu.get();
+      auto& a = aggregates[i];
+      auto iu = a.iu.get();
+
       out.writeType(iu->getType());
       out.write(" ");
       out.writeIU(iu);
-      out.writeln(" = std::get<" + std::to_string(i) + ">(it.second);");
+      out.write(" = std::get<" + std::to_string(i) + ">(it.second)");
+
+      if (a.op == Op::Avg) {
+         out.write(".first / (double)std::get<" + std::to_string(i) + ">(it.second).second");
+      }
+
+      out.writeln(";");
    }
    consume();
    out.writeln("}");
@@ -306,6 +335,16 @@ Sort::Sort(unique_ptr<Operator> input, vector<Entry> order, optional<uint64_t> l
 void Sort::generate(CppWriter& out, std::function<void()> consume)
 // Generate SQL
 {
+   // validate
+   for (auto& e : order) {
+      if (e.descending) {
+         throw "Unsupported orderby ordering";
+      }
+   }
+   if (offset.has_value() || limit.has_value()) {
+      throw "Unsupported orderby offset or limit";
+   }
+
    auto ius = input->getIUs();
    const IU vecIU{Type::getUnknown()};
 
@@ -321,6 +360,7 @@ void Sort::generate(CppWriter& out, std::function<void()> consume)
    }
    out.write(">> ");
    out.writeIU(&vecIU);
+   out.writeln(";");
 
    input->generate(out, [&]() {
       out.writeIU(&vecIU);
@@ -347,9 +387,6 @@ void Sort::generate(CppWriter& out, std::function<void()> consume)
    out.writeln(") {");
    
    for (size_t i = 0; i < ius.size(); i++) {
-      if (i > 0)
-         out.write(", ");
-
       auto iu = ius[i];
       out.writeType(iu->getType());
       out.write(" ");

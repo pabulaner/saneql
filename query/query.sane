@@ -1,3 +1,4 @@
-warehouse
-.filter(w_name='e03gy9m')
-.join(stock, w_id=s_w_id)
+item
+.groupby({i_im_id}, {item_count:=count(), price_sum:=avg(i_price)})
+.orderby({i_im_id})
+.filter(item_count > 10)

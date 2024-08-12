@@ -59,10 +59,18 @@ int main(int argc, char* argv[]) {
          auto tree = res.table().get();
          tree->generate(out, [&]() {
             out.write("std::cout << ");
-            out.writeIUs(tree->getIUs());
+            bool first = true;
+            for (auto iu : tree->getIUs()) {
+               if (first) 
+                     first = false;
+               else
+                     out.write(" << \", \" << ");
+               out.writeIU(iu);
+            }
             out.writeln(" << std::endl;");
          });
       }
+      std::cout << out.getResult() << std::endl;
    } catch (const exception& e) {
       cerr << e.what() << endl;
       return 1;

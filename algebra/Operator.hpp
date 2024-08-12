@@ -113,7 +113,7 @@ class Map : public Operator {
    Map(std::unique_ptr<Operator> input, std::vector<Entry> computations);
 
    // Get the IUs
-   std::vector<const IU*> getIUs() const override { return input->getIUs(); }
+   std::vector<const IU*> getIUs() const override { return vutil::combine(input->getIUs(), vutil::map<const IU*>(computations, [](const Entry& e) { return e.iu.get(); })); }
    // Generate SQL
    void generate(CppWriter& out, std::function<void()> consume) override;
 };
@@ -228,6 +228,8 @@ class Sort : public Operator {
    /// Constructor
    Sort(std::unique_ptr<Operator> input, std::vector<Entry> order, std::optional<uint64_t> limit, std::optional<uint64_t> offset);
 
+   // Get the IUs
+   std::vector<const IU*> getIUs() const override { return input->getIUs(); }
    // Generate SQL
    void generate(CppWriter& out, std::function<void()> consume) override;
 };
