@@ -16,6 +16,7 @@
 namespace adapter {
 class CppIU;
 class CppWriter;
+class Optimizer;
 }
 //---------------------------------------------------------------------------
 using namespace adapter;
@@ -47,6 +48,10 @@ class Operator {
 
    // Get the IUs
    virtual std::vector<const IU*> getIUs() const { return {}; };
+   // Get the inputs
+   virtual std::vector<Operator*> getInputs() { return {}; }
+   // Set the inputs
+   virtual void setInputs(const std::vector<Operator*>& inputs) {}
    // Generate SQL
    virtual void generate(CppWriter& out, std::function<void()> consume) = 0;
 };
@@ -93,8 +98,14 @@ class Select : public Operator {
 
    // Get the IUs
    std::vector<const IU*> getIUs() const override { return input->getIUs(); }
+   // Get the inputs
+   std::vector<Operator*> getInputs() override { return { input.get() }; }
+   // Set the inputs
+   void setInputs(const std::vector<Operator*>& inputs) override { input.release(); input.reset(inputs[0]); }
    // Generate SQL
    void generate(CppWriter& out, std::function<void()> consume) override;
+
+   friend class adapter::Optimizer;
 };
 //---------------------------------------------------------------------------
 /// A map operator
@@ -114,6 +125,10 @@ class Map : public Operator {
 
    // Get the IUs
    std::vector<const IU*> getIUs() const override { return vutil::combine(input->getIUs(), vutil::map<const IU*>(computations, [](const Entry& e) { return e.iu.get(); })); }
+   // Get the inputs
+   std::vector<Operator*> getInputs() override { return { input.get() }; }
+   // Set the inputs
+   void setInputs(const std::vector<Operator*>& inputs) override { input.release(); input.reset(inputs[0]); }
    // Generate SQL
    void generate(CppWriter& out, std::function<void()> consume) override;
 };
@@ -181,6 +196,10 @@ class Join : public Operator {
 
    // Get the IUs
    std::vector<const IU*> getIUs() const override { return vutil::combine(left->getIUs(), right->getIUs()); }
+   // Get the inputs
+   std::vector<Operator*> getInputs() override { return { left.get(), right.get() }; }
+   // Set the inputs
+   void setInputs(const std::vector<Operator*>& inputs) override { left.release(); right.release(); left.reset(inputs[0]); right.reset(inputs[1]); }
    // Generate SQL
    void generate(CppWriter& out, std::function<void()> consume) override;
 };
@@ -201,6 +220,10 @@ class GroupBy : public Operator, public AggregationLike {
 
    // Get the IUs
    std::vector<const IU*> getIUs() const override { return vutil::combine(vutil::map<const IU*>(groupBy, [](auto& value) { return value.iu.get(); }), vutil::map<const IU*>(aggregates, [](auto& value) { return value.iu.get(); })); }
+   // Get the inputs
+   std::vector<Operator*> getInputs() override { return { input.get() }; }
+   // Set the inputs
+   void setInputs(const std::vector<Operator*>& inputs) override { input.release(); input.reset(inputs[0]); }
    // Generate SQL
    void generate(CppWriter& out, std::function<void()> consume) override;
 };
@@ -230,6 +253,10 @@ class Sort : public Operator {
 
    // Get the IUs
    std::vector<const IU*> getIUs() const override { return input->getIUs(); }
+   // Get the inputs
+   std::vector<Operator*> getInputs() override { return { input.get() }; }
+   // Set the inputs
+   void setInputs(const std::vector<Operator*>& inputs) override { input.release(); input.reset(inputs[0]); }
    // Generate SQL
    void generate(CppWriter& out, std::function<void()> consume) override;
 };

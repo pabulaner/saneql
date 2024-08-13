@@ -62,6 +62,7 @@
         "thread": "cpp",
         "typeinfo": "cpp",
         "variant": "cpp",
-        "ios": "cpp"
+        "ios": "cpp",
+        "source_location": "cpp"
     }
 }

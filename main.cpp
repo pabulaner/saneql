@@ -6,6 +6,7 @@
 #include "semana/SemanticAnalysis.hpp"
 #include "sql/SQLWriter.hpp"
 #include "adapter/CppWriter.hpp"
+#include "adapter/Optimizer.hpp"
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -56,7 +57,10 @@ int main(int argc, char* argv[]) {
       if (res.isScalar()) {
          res.scalar()->generate(out);
       } else {
-         auto tree = res.table().get();
+         Optimizer opt(std::move(res.table()));
+         opt.optimizeSelects();
+         
+         auto tree = opt.get();
          tree->generate(out, [&]() {
             out.write("std::cout << ");
             bool first = true;

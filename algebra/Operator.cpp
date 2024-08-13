@@ -84,10 +84,10 @@ SetOperation::SetOperation(unique_ptr<Operator> left, unique_ptr<Operator> right
 {
 }
 //---------------------------------------------------------------------------
-void SetOperation::generate(CppWriter& out, std::function<void()> consume)
+void SetOperation::generate(CppWriter&, std::function<void()>)
 // Generate SQL
 {
-   throw;
+   throw std::runtime_error("SetOperation is not implemented");
 }
 //---------------------------------------------------------------------------
 Join::Join(unique_ptr<Operator> left, unique_ptr<Operator> right, unique_ptr<Expression> condition, JoinType joinType)
@@ -122,16 +122,22 @@ void Join::generate(CppWriter& out, std::function<void()> consume)
          auto rightIUs = right->getIUs();
 
          if (l && r) {
-            if ((vutil::contains(leftIUs, leftIU) && vutil::contains(rightIUs, rightIU)) || (vutil::contains(leftIUs, rightIU) && vutil::contains(rightIUs, leftIU))) {
+            if (vutil::contains(leftIUs, leftIU) && vutil::contains(rightIUs, rightIU)) {
                leftKeyIUs.push_back(leftIU);
                rightKeyIUs.push_back(rightIU);
+
+               return;
+            }
+            if (vutil::contains(leftIUs, rightIU) && vutil::contains(rightIUs, leftIU)) {
+               leftKeyIUs.push_back(rightIU);
+               rightKeyIUs.push_back(leftIU);
 
                return;
             }
          }
       }
 
-      throw "Unsupported join condition";
+      throw std::runtime_error("Unsupported join condition");
    };
 
    getKeyIUs(condition.get());
@@ -212,7 +218,7 @@ void GroupBy::generate(CppWriter& out, std::function<void()> consume)
          case Op::Min:
          case Op::Max:
          case Op::CountStar: break;
-         default: throw "Unsupported groupby aggregation";
+         default: throw std::runtime_error("Unsupported groupby aggregation");
       }
    }
 
@@ -273,6 +279,7 @@ void GroupBy::generate(CppWriter& out, std::function<void()> consume)
             case Op::Max: out.writeExpression(a.value.get()); break;
             case Op::Avg: out.write("{"); out.writeExpression(a.value.get()); out.write(", 1}"); break;
             case Op::CountStar: out.write("1"); break;
+            default: throw;
          }
       }
 
@@ -281,7 +288,7 @@ void GroupBy::generate(CppWriter& out, std::function<void()> consume)
 
       for (size_t i = 0; i < aggregates.size(); i++) {
          std::string value = "std::get<" + std::to_string(i) + ">(it->second)";
-         auto& a = aggregates[i];
+         Aggregation& a = aggregates[i];
 
          out.write(value + " ");
          switch (a.op) {
@@ -290,6 +297,7 @@ void GroupBy::generate(CppWriter& out, std::function<void()> consume)
             case Op::Max: out.write("= std::max(get<" + std::to_string(i) + ">(it->second), "); out.writeExpression(a.value.get()); out.write(")"); break;
             case Op::Avg: out.write("= {" + value + ".first + "); out.writeExpression(a.value.get()); out.write(", " + value + ".second + 1}"); break;
             case Op::CountStar: out.write("+= 1"); break;
+            default: throw;
          }
          out.writeln(";");
       }
@@ -308,12 +316,11 @@ void GroupBy::generate(CppWriter& out, std::function<void()> consume)
          out.writeln(" = std::get<" + std::to_string(i) + ">(it.first);");
    }
    for (size_t i = 0; i < aggregates.size(); i++) {
-      auto& a = aggregates[i];
-      auto iu = a.iu.get();
+      Aggregation& a = aggregates[i];
 
-      out.writeType(iu->getType());
+      out.writeType(a.iu->getType());
       out.write(" ");
-      out.writeIU(iu);
+      out.writeIU(a.iu.get());
       out.write(" = std::get<" + std::to_string(i) + ">(it.second)");
 
       if (a.op == Op::Avg) {
@@ -338,14 +345,14 @@ void Sort::generate(CppWriter& out, std::function<void()> consume)
    // validate
    for (auto& e : order) {
       if (e.descending) {
-         throw "Unsupported orderby ordering";
+         throw std::runtime_error("Unsupported orderby ordering");
       }
    }
    if (offset.has_value() || limit.has_value()) {
-      throw "Unsupported orderby offset or limit";
+      throw std::runtime_error("Unsupported orderby offset or limit");
    }
 
-   auto ius = input->getIUs();
+   std::vector<const IU*> ius = input->getIUs();
    const IU vecIU{Type::getUnknown()};
 
    bool first = true;
@@ -376,7 +383,7 @@ void Sort::generate(CppWriter& out, std::function<void()> consume)
       out.writeln("});");
    });
 
-   out.write("sort(");
+   out.write("std::sort(");
    out.writeIU(&vecIU);
    out.write(".begin(), ");
    out.writeIU(&vecIU);
@@ -404,10 +411,10 @@ Window::Window(unique_ptr<Operator> input, vector<Aggregation> aggregates, vecto
 {
 }
 //---------------------------------------------------------------------------
-void Window::generate(CppWriter& out, std::function<void()> consume)
+void Window::generate(CppWriter&, std::function<void()>)
 // Generate SQL
 {
-   throw;
+   throw std::runtime_error("Window is not implemented");
 }
 //---------------------------------------------------------------------------
 InlineTable::InlineTable(vector<unique_ptr<algebra::IU>> columns, vector<unique_ptr<algebra::Expression>> values, unsigned rowCount)
@@ -416,10 +423,10 @@ InlineTable::InlineTable(vector<unique_ptr<algebra::IU>> columns, vector<unique_
 {
 }
 //---------------------------------------------------------------------------
-void InlineTable::generate(CppWriter& out, std::function<void()> consume)
+void InlineTable::generate(CppWriter&, std::function<void()>)
 // Generate SQL
 {
-   throw;
+   throw std::runtime_error("InlineTable is not implemented");
 }
 //---------------------------------------------------------------------------
 }

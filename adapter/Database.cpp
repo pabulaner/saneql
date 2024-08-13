@@ -5,8 +5,6 @@
 #include <tuple>
 #include <algorithm>
 
-#include "Operator.hpp"
-
 using namespace adapter;
 
 namespace adapter {
