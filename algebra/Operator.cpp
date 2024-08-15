@@ -405,7 +405,7 @@ void InlineTable::generate(CppWriter&, std::function<void()>)
 }
 //---------------------------------------------------------------------------
 IndexJoin::IndexJoin(string name, vector<TableScan::Column> columns, unique_ptr<Operator> input, vector<const IU*> indexIUs) 
-   : name(move(name)), columns(move(columns)), input(move(input)), indexIUs(move(indexIUs)))
+   : name(move(name)), columns(move(columns)), input(move(input)), indexIUs(move(indexIUs))
 // Constructor
 {
 }

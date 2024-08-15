@@ -2,3 +2,4 @@ item
 .groupby({i_im_id}, {item_count:=count(), price_sum:=avg(i_price)})
 .orderby({i_im_id})
 .filter(item_count > 10)
+.filter(price_sum > 5)

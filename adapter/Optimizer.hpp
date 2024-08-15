@@ -22,7 +22,7 @@ public:
 
     void optimizeJoins();
 
-    std::unique_ptr<Operator> get() { return std::move(tree); }
+    Operator* get() { return tree.get(); }
 };
 
 }

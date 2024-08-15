@@ -85,10 +85,10 @@ void Optimizer::optimizeJoins() {
         // check if left or right can be index joined
         if (left && canBeIndexed(left->getKeyIUs(), keyIUs.first)) {
             orderKeyIUs(left->getKeyIUs(), &keyIUs.first, &keyIUs.second);
-            indexJoin = std::make_unique<IndexJoin>(std::move(join->left), std::move(join->right), keyIUs.second);
+            // indexJoin = std::make_unique<IndexJoin>(std::move(join->left), std::move(join->right), std::move(keyIUs.second));
         } else if (right && canBeIndexed(right->getKeyIUs(), keyIUs.second)) {
             orderKeyIUs(right->getKeyIUs(), &keyIUs.second, &keyIUs.first);
-            indexJoin = std::make_unique<IndexJoin>(std::move(join->right), std::move(join->left), keyIUs.first);
+            // indexJoin = std::make_unique<IndexJoin>(std::move(join->right), std::move(join->left), std::move(keyIUs.first));
         }
 
         if (indexJoin.get()) {

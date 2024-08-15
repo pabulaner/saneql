@@ -30,7 +30,7 @@ template <typename TOp>
 void forEachModifiable(Operator* tree, std::function<bool(TOp* op)> consumer) {
     std::vector<TOp*> ops;
 
-    forEach(tree, [&](TOp* op) {
+    forEach<TOp>(tree, [&](TOp* op) {
         ops.push_back(op);
         return true;
     });
@@ -41,6 +41,9 @@ void forEachModifiable(Operator* tree, std::function<bool(TOp* op)> consumer) {
         }
     }
 }
+
+// Print the operator tree
+void printTree(Operator* tree);
 
 // Insert the select operator after the target operator and return the new tree
 std::unique_ptr<Operator> insertSelectIfNotPresent(std::unique_ptr<Operator> tree, Operator* target);

@@ -1,8 +1,41 @@
 #include "OperatorUtil.hpp"
 
+#include <iostream>
+
 namespace adapter {
 
 namespace outil {
+
+void printTree(Operator* tree) {
+    size_t tabs = 0;
+    forEach<Operator>(tree, [&](Operator* op) {
+        Operator* out = op;
+        while (out = getOutputOperator(tree, out)) {
+            std::cout << '\t';
+        }
+
+        if (dynamic_cast<TableScan*>(op)) {
+            std::cout << "TableScan" << std::endl;
+        }
+        if (dynamic_cast<Select*>(op)) {
+            std::cout << "Select" << std::endl;
+        }
+        if (dynamic_cast<Map*>(op)) {
+            std::cout << "Map" << std::endl;
+        }
+        if (dynamic_cast<Join*>(op)) {
+            std::cout << "Join" << std::endl;
+        }
+        if (dynamic_cast<GroupBy*>(op)) {
+            std::cout << "GroupBy" << std::endl;
+        }
+        if (dynamic_cast<Sort*>(op)) {
+            std::cout << "Sort" << std::endl;
+        }
+
+        return true;
+    });
+}
 
 std::unique_ptr<Operator> insertSelectIfNotPresent(std::unique_ptr<Operator> tree, Operator* target) {
     if (tree.get() == target) {

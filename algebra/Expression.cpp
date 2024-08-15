@@ -54,11 +54,10 @@ void ConstExpression::generate(CppWriter& out)
 void CastExpression::generate(CppWriter& out)
 // Generate SQL
 {
-   out.write("cast(");
-   input->generate(out);
-   out.write(" as ");
+   out.write("(");
    out.writeType(getType());
    out.write(")");
+   input->generate(out);
 }
 //---------------------------------------------------------------------------
 ComparisonExpression::ComparisonExpression(unique_ptr<Expression> left, unique_ptr<Expression> right, Mode mode, Collate collate)
@@ -74,13 +73,13 @@ void ComparisonExpression::generate(CppWriter& out)
    switch (mode) {
       case Mode::Equal: out.write(" == "); break;
       case Mode::NotEqual: out.write(" != "); break;
-      case Mode::Is: out.write(" is not distinct from "); break;
-      case Mode::IsNot: out.write(" is distinct from "); break;
+      case Mode::Is: throw std::runtime_error("ComparisionExpression Is is not implemented");
+      case Mode::IsNot: throw std::runtime_error("ComparisionExpression IsNot is not implemented");
       case Mode::Less: out.write(" < "); break;
       case Mode::LessOrEqual: out.write(" <= "); break;
       case Mode::Greater: out.write(" > "); break;
       case Mode::GreaterOrEqual: out.write(" >= "); break;
-      case Mode::Like: out.write(" like "); break;
+      case Mode::Like: throw std::runtime_error("ComparisionExpression Like is not implemented");
    }
    right->generateOperand(out);
 }
@@ -95,9 +94,11 @@ void BetweenExpression::generate(CppWriter& out)
 // Generate SQL
 {
    base->generateOperand(out);
-   out.write(" between ");
+   out.write(" >= ");
    lower->generateOperand(out);
-   out.write(" and ");
+   out.write(" && ");
+   base->generateOperand(out);
+   out.write(" <= ");
    upper->generateOperand(out);
 }
 //---------------------------------------------------------------------------
@@ -132,19 +133,26 @@ BinaryExpression::BinaryExpression(unique_ptr<Expression> left, unique_ptr<Expre
 void BinaryExpression::generate(CppWriter& out)
 // Generate SQL
 {
-   left->generateOperand(out);
-   switch (op) {
-      case Operation::Plus: out.write(" + "); break;
-      case Operation::Minus: out.write(" - "); break;
-      case Operation::Mul: out.write(" * "); break;
-      case Operation::Div: out.write(" / "); break;
-      case Operation::Mod: out.write(" % "); break;
-      case Operation::Power: out.write(" ^ "); break;
-      case Operation::Concat: out.write(" || "); break;
-      case Operation::And: out.write(" and "); break;
-      case Operation::Or: out.write(" or "); break;
+   if (op == Operation::Power) {
+      out.write("std::pow(");
+      left->generate(out);
+      out.write(", ");
+      right->generate(out);
+      out.write(")");
+   } else {
+      left->generateOperand(out);
+      switch (op) {
+         case Operation::Plus: out.write(" + "); break;
+         case Operation::Minus: out.write(" - "); break;
+         case Operation::Mul: out.write(" * "); break;
+         case Operation::Div: out.write(" / "); break;
+         case Operation::Mod: out.write(" % "); break;
+         case Operation::Concat: out.write(" + "); break;
+         case Operation::And: out.write(" && "); break;
+         case Operation::Or: out.write(" || "); break;
+      }
+      right->generateOperand(out);
    }
-   right->generateOperand(out);
 }
 //---------------------------------------------------------------------------
 UnaryExpression::UnaryExpression(unique_ptr<Expression> input, Type resultType, Operation op)
@@ -159,7 +167,7 @@ void UnaryExpression::generate(CppWriter& out)
    switch (op) {
       case Operation::Plus: out.write("+"); break;
       case Operation::Minus: out.write("-"); break;
-      case Operation::Not: out.write(" not "); break;
+      case Operation::Not: out.write("!"); break;
    }
    input->generateOperand(out);
 }

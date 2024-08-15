@@ -7,6 +7,7 @@
 #include "sql/SQLWriter.hpp"
 #include "adapter/CppWriter.hpp"
 #include "adapter/Optimizer.hpp"
+#include "adapter/OperatorUtil.hpp"
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -61,6 +62,7 @@ int main(int argc, char* argv[]) {
          opt.optimizeSelects();
          
          auto tree = opt.get();
+         // outil::printTree(tree);
          tree->generate(out, [&]() {
             out.write("std::cout << ");
             bool first = true;
