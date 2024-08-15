@@ -1,7 +1,7 @@
 #include "algebra/Operator.hpp"
 #include "sql/SQLWriter.hpp"
 #include "adapter/CppWriter.hpp"
-#include "fmt/printf.h"
+#include "adapter/OperatorUtil.hpp"
 //---------------------------------------------------------------------------
 // (c) 2023 Thomas Neumann
 //---------------------------------------------------------------------------
@@ -18,6 +18,20 @@ TableScan::TableScan(string name, vector<Column> columns)
    : name(move(name)), columns(move(columns))
 // Constructor
 {
+}
+//---------------------------------------------------------------------------
+std::vector<const IU*> TableScan::getKeyIUs() const 
+// Get the key IUs
+{ 
+   std::vector<const IU*> result;
+
+   for (auto& c : columns) {
+      if (c.isKey) {
+         result.push_back(c.iu.get());
+      }
+   }
+
+   return result;
 }
 //---------------------------------------------------------------------------
 void TableScan::generate(CppWriter& out, std::function<void()> consume)
@@ -99,48 +113,9 @@ Join::Join(unique_ptr<Operator> left, unique_ptr<Operator> right, unique_ptr<Exp
 void Join::generate(CppWriter& out, std::function<void()> consume)
 // Generate SQL
 {
-   std::vector<const IU*> leftKeyIUs;
-   std::vector<const IU*> rightKeyIUs;
-
-   // get key IUs and validate
-   std::function<void(Expression*)> getKeyIUs = [&](Expression* exp) {
-      BinaryExpression* b = dynamic_cast<BinaryExpression*>(exp);
-      ComparisonExpression* c = dynamic_cast<ComparisonExpression*>(exp);
-
-      if (b && b->op == BinaryExpression::And) {
-         getKeyIUs(b->left.get());
-         getKeyIUs(b->right.get());
-
-         return;
-      }
-      if (c && c->mode == ComparisonExpression::Equal) {
-         IURef* l = dynamic_cast<IURef*>(c->left.get());
-         IURef* r = dynamic_cast<IURef*>(c->right.get());
-         auto leftIU = l->getIU();
-         auto rightIU = r->getIU();
-         auto leftIUs = left->getIUs();
-         auto rightIUs = right->getIUs();
-
-         if (l && r) {
-            if (vutil::contains(leftIUs, leftIU) && vutil::contains(rightIUs, rightIU)) {
-               leftKeyIUs.push_back(leftIU);
-               rightKeyIUs.push_back(rightIU);
-
-               return;
-            }
-            if (vutil::contains(leftIUs, rightIU) && vutil::contains(rightIUs, leftIU)) {
-               leftKeyIUs.push_back(rightIU);
-               rightKeyIUs.push_back(leftIU);
-
-               return;
-            }
-         }
-      }
-
-      throw std::runtime_error("Unsupported join condition");
-   };
-
-   getKeyIUs(condition.get());
+   std::pair<std::vector<const IU*>, std::vector<const IU*>> keyIUs = outil::getJoinKeyIUs(left.get(), right.get(), condition.get());
+   std::vector<const IU*> leftKeyIUs = std::move(keyIUs.first);
+   std::vector<const IU*> rightKeyIUs = std::move(keyIUs.second);
 
    std::vector<const IU*> leftPayloadIUs;
    std::vector<const IU*> rightPayloadIUs;
@@ -427,6 +402,50 @@ void InlineTable::generate(CppWriter&, std::function<void()>)
 // Generate SQL
 {
    throw std::runtime_error("InlineTable is not implemented");
+}
+//---------------------------------------------------------------------------
+IndexJoin::IndexJoin(string name, vector<TableScan::Column> columns, unique_ptr<Operator> input, vector<const IU*> indexIUs) 
+   : name(move(name)), columns(move(columns)), input(move(input)), indexIUs(move(indexIUs)))
+// Constructor
+{
+}
+//---------------------------------------------------------------------------
+void IndexJoin::generate(CppWriter& out, std::function<void()> consume)
+// Generate SQL
+{
+   input->generate(out, [&]() {
+      out.write("db->" + name + ".lookup1({");
+      
+      bool first = true;
+      for (auto iu : indexIUs) {
+         if (first)
+            first = false;
+         else
+            out.write(", ");
+         out.writeIU(iu);
+      }
+
+      out.writeln("}, [&](auto& value) {");
+
+      size_t i = 0;
+      for (auto& c : columns) {
+         out.writeType(c.iu->getType());
+         out.write(" ");
+         out.writeIU(c.iu.get());
+         out.writeln(" = ");
+
+         // assumes that the key IUs are the same order as the index IUs
+         if (c.isKey) {
+            out.writeIU(indexIUs[i++]);
+         } else {
+            out.write("value." + c.name);
+         }
+
+         out.writeln(";");
+      }
+
+      out.writeln("});");
+   });
 }
 //---------------------------------------------------------------------------
 }

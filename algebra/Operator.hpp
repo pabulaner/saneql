@@ -81,6 +81,8 @@ class TableScan : public Operator {
 
    // Get the IUs
    std::vector<const IU*> getIUs() const override { return vutil::map<const IU*>(columns, [](const Column& c) { return c.iu.get(); }); }
+   // Get the key IUs
+   std::vector<const IU*> getKeyIUs() const;
    // Generate SQL
    void generate(CppWriter& out, std::function<void()> consume) override;
 };
@@ -202,6 +204,8 @@ class Join : public Operator {
    void setInputs(const std::vector<Operator*>& inputs) override { left.release(); right.release(); left.reset(inputs[0]); right.reset(inputs[1]); }
    // Generate SQL
    void generate(CppWriter& out, std::function<void()> consume) override;
+
+   friend class adapter::Optimizer;
 };
 //---------------------------------------------------------------------------
 /// A group by operator
@@ -298,6 +302,32 @@ class InlineTable : public Operator {
    /// Constructor
    InlineTable(std::vector<std::unique_ptr<algebra::IU>> columns, std::vector<std::unique_ptr<algebra::Expression>> values, unsigned rowCount);
 
+   // Generate SQL
+   void generate(CppWriter& out, std::function<void()> consume) override;
+};
+//---------------------------------------------------------------------------
+/// A index join operator
+class IndexJoin : public Operator {
+   private:
+   /// The table name
+   std::string name;
+   /// The columns
+   std::vector<TableScan::Column> columns;
+   /// The input
+   std::unique_ptr<Operator> input;
+   /// The index IUs
+   std::vector<const IU*> indexIUs;
+
+   public:
+   /// Constructor
+   IndexJoin(std::string name, std::vector<TableScan::Column> columns, std::unique_ptr<Operator> input, std::vector<const IU*> indexIUs);
+
+   // Get the IUs
+   std::vector<const IU*> getIUs() const override { return vutil::combine(vutil::map<const IU*>(columns, [](const TableScan::Column& c) { return c.iu.get(); }), input->getIUs()); }
+   // Get the inputs
+   std::vector<Operator*> getInputs() override { throw std::runtime_error("Invalid operation on IndexJoin"); }
+   // Set the inputs
+   void setInputs(const std::vector<Operator*>& inputs) override { throw std::runtime_error("Invalid operation on IndexJoin"); }
    // Generate SQL
    void generate(CppWriter& out, std::function<void()> consume) override;
 };

@@ -16,7 +16,7 @@ std::unique_ptr<Operator> insertSelectIfNotPresent(std::unique_ptr<Operator> tre
         return tree;
     }
 
-    std::unique_ptr<Select> select = std::make_unique<Select>(std::unique_ptr<Operator>(target), std::unique_ptr<Expression>(nullptr));
+    std::unique_ptr<Select> select = std::make_unique<Select>(std::unique_ptr<Operator>(target), nullptr);
     std::vector<Operator*> inputs = out->getInputs();
 
     for (size_t i = 0; i < inputs.size(); i++) {
@@ -81,6 +81,37 @@ Operator* getIUOperator(Operator* tree, std::vector<const IU*> ius) {
 
     return result;
 }
+
+std::pair<std::vector<const IU*>, std::vector<const IU*>> getJoinKeyIUs(Operator* left, Operator* right, Expression* exp) {
+    BinaryExpression* b = dynamic_cast<BinaryExpression*>(exp);
+    ComparisonExpression* c = dynamic_cast<ComparisonExpression*>(exp);
+
+    if (b && b->op == BinaryExpression::And) {
+        auto l = getJoinKeyIUs(left, right, b->left.get());
+        auto r = getJoinKeyIUs(left, right, b->right.get());
+        
+        return {vutil::combine(l.first, r.first), vutil::combine(l.second, r.second)};
+    }
+    if (c && c->mode == ComparisonExpression::Equal) {
+        IURef* l = dynamic_cast<IURef*>(c->left.get());
+        IURef* r = dynamic_cast<IURef*>(c->right.get());
+        auto leftIU = l->getIU();
+        auto rightIU = r->getIU();
+        auto leftIUs = left->getIUs();
+        auto rightIUs = right->getIUs();
+
+        if (l && r) {
+            if (vutil::contains(leftIUs, leftIU) && vutil::contains(rightIUs, rightIU)) {
+                return {{leftIU}, {rightIU}};
+            }
+            if (vutil::contains(leftIUs, rightIU) && vutil::contains(rightIUs, leftIU)) {
+                return {{rightIU}, {leftIU}};
+            }
+        }
+    }
+
+    throw std::runtime_error("Unsupported join condition");
+};
 
 }
 

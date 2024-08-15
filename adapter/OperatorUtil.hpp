@@ -26,6 +26,22 @@ void forEach(Operator* tree, std::function<bool(TOp* op)> consumer) {
     }
 }
 
+template <typename TOp>
+void forEachModifiable(Operator* tree, std::function<bool(TOp* op)> consumer) {
+    std::vector<TOp*> ops;
+
+    forEach(tree, [&](TOp* op) {
+        ops.push_back(op);
+        return true;
+    });
+
+    for (TOp* op : ops) {
+        if (!consumer(op)) {
+            return;
+        }
+    }
+}
+
 // Insert the select operator after the target operator and return the new tree
 std::unique_ptr<Operator> insertSelectIfNotPresent(std::unique_ptr<Operator> tree, Operator* target);
 
@@ -37,6 +53,9 @@ Operator* getOutputOperator(Operator* tree, Operator* target);
 
 // Get the operator that provides the specified ius
 Operator* getIUOperator(Operator* tree, std::vector<const IU*> ius);
+
+// Get the join key IU pairs
+std::pair<std::vector<const IU*>, std::vector<const IU*>> getJoinKeyIUs(Operator* left, Operator* right, Expression* exp);
 
 }
 
