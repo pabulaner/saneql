@@ -113,6 +113,11 @@ Join::Join(unique_ptr<Operator> left, unique_ptr<Operator> right, unique_ptr<Exp
 void Join::generate(CppWriter& out, std::function<void()> consume)
 // Generate SQL
 {
+   // validate
+   if (joinType != JoinType::Inner) {
+      throw std::runtime_error("Unsupported join type");
+   }
+
    std::pair<std::vector<const IU*>, std::vector<const IU*>> keyIUs = outil::getJoinKeyIUs(left.get(), right.get(), condition.get());
    std::vector<const IU*> leftKeyIUs = std::move(keyIUs.first);
    std::vector<const IU*> rightKeyIUs = std::move(keyIUs.second);

@@ -111,8 +111,7 @@ InExpression::InExpression(unique_ptr<Expression> probe, vector<unique_ptr<Expre
 void InExpression::generate(CppWriter& out)
 // Generate SQL
 {
-   probe->generateOperand(out);
-   out.write(" in (");
+   out.write("vutil::contains({");
    bool first = true;
    for (auto& v : values) {
       if (first)
@@ -121,6 +120,8 @@ void InExpression::generate(CppWriter& out)
          out.write(", ");
       v->generate(out);
    }
+   out.write("}, ");
+   probe->generate(out);
    out.write(")");
 }
 //---------------------------------------------------------------------------
@@ -181,15 +182,7 @@ ExtractExpression::ExtractExpression(unique_ptr<Expression> input, Part part)
 void ExtractExpression::generate(CppWriter& out)
 // Generate SQL
 {
-   out.write("extract(");
-   switch (part) {
-      case Part::Year: out.write("year"); break;
-      case Part::Month: out.write("month"); break;
-      case Part::Day: out.write("day"); break;
-   }
-   out.write(" from ");
-   input->generateOperand(out);
-   out.write(")");
+   throw std::runtime_error("ExtractExpression is not implemented");
 }
 //---------------------------------------------------------------------------
 SubstrExpression::SubstrExpression(unique_ptr<Expression> value, unique_ptr<Expression> from, unique_ptr<Expression> len)
@@ -201,17 +194,7 @@ SubstrExpression::SubstrExpression(unique_ptr<Expression> value, unique_ptr<Expr
 void SubstrExpression::generate(CppWriter& out)
 // Generate SQL
 {
-   out.write("substring(");
-   value->generate(out);
-   if (from) {
-      out.write(" from ");
-      from->generate(out);
-   }
-   if (len) {
-      out.write(" for ");
-      len->generate(out);
-   }
-   out.write(")");
+   throw std::runtime_error("SubstrExpression is not implemented");
 }
 //---------------------------------------------------------------------------
 SimpleCaseExpression::SimpleCaseExpression(unique_ptr<Expression> value, Cases cases, unique_ptr<Expression> defaultValue)
@@ -223,17 +206,7 @@ SimpleCaseExpression::SimpleCaseExpression(unique_ptr<Expression> value, Cases c
 void SimpleCaseExpression::generate(CppWriter& out)
 // Generate SQL
 {
-   out.write("case ");
-   value->generateOperand(out);
-   for (auto& c : cases) {
-      out.write(" when ");
-      c.first->generate(out);
-      out.write(" then ");
-      c.second->generate(out);
-   }
-   out.write(" else ");
-   defaultValue->generate(out);
-   out.write(" end");
+   throw std::runtime_error("SimpleCaseExpression is not implemented");
 }
 //---------------------------------------------------------------------------
 SearchedCaseExpression::SearchedCaseExpression(Cases cases, unique_ptr<Expression> defaultValue)
@@ -245,16 +218,7 @@ SearchedCaseExpression::SearchedCaseExpression(Cases cases, unique_ptr<Expressio
 void SearchedCaseExpression::generate(CppWriter& out)
 // Generate SQL
 {
-   out.write("case");
-   for (auto& c : cases) {
-      out.write(" when ");
-      c.first->generate(out);
-      out.write(" then ");
-      c.second->generate(out);
-   }
-   out.write(" else ");
-   defaultValue->generate(out);
-   out.write(" end");
+   throw std::runtime_error("SearchedCaseExpression is not implemented");
 }
 //---------------------------------------------------------------------------
 Aggregate::Aggregate(unique_ptr<Operator> input, vector<Aggregation> aggregates, unique_ptr<Expression> computation)
@@ -266,41 +230,7 @@ Aggregate::Aggregate(unique_ptr<Operator> input, vector<Aggregation> aggregates,
 void Aggregate::generate(CppWriter& out)
 // Generate SQL
 {
-   out.write("(select ");
-   computation->generate(out);
-   if (!aggregates.empty()) {
-      out.write(" from (select ");
-      bool first = true;
-      for (auto& a : aggregates) {
-         if (first)
-            first = false;
-         else
-            out.write(", ");
-         switch (a.op) {
-            case Op::CountStar: out.write("count(*)"); break;
-            case Op::Count: out.write("count("); break;
-            case Op::CountDistinct: out.write("count(distinct "); break;
-            case Op::Sum: out.write("sum("); break;
-            case Op::SumDistinct: out.write("sum(distinct "); break;
-            case Op::Avg: out.write("avg("); break;
-            case Op::AvgDistinct: out.write("avg(distinct "); break;
-            case Op::Min: out.write("min("); break;
-            case Op::Max: out.write("max("); break;
-         }
-         if (a.op != Op::CountStar) {
-            a.value->generate(out);
-            out.write(")");
-         }
-         out.write(" as ");
-         out.writeIU(a.iu.get());
-      }
-      out.write(" from ");
-      // TODO: implement
-      // input->generate(out);
-      out.write(" s");
-      out.write(") s");
-   }
-   out.write(")");
+   throw std::runtime_error("Aggregate is not implemented");
 }
 //---------------------------------------------------------------------------
 ForeignCall::ForeignCall(string name, Type returnType, vector<unique_ptr<Expression>> arguments, CallType callType)
@@ -310,50 +240,7 @@ ForeignCall::ForeignCall(string name, Type returnType, vector<unique_ptr<Express
 }
 //---------------------------------------------------------------------------
 void ForeignCall::generate(CppWriter& out) {
-   switch (callType) {
-      case CallType::Function: {
-         out.write(name);
-         out.write("(");
-         bool first = true;
-         for (auto& a : arguments) {
-            if(!std::exchange(first, false)) out.write(", ");
-            a->generate(out);
-         }
-         out.write(")");
-         break;
-      }
-      case CallType::LeftAssocOperator: { // ((a op b) op c) op d
-         for (auto i = 0u; i != arguments.size() - 2; ++i) {
-            out.write("(");
-         }
-         arguments[0]->generateOperand(out);
-         for (auto i = 1u; i != arguments.size(); ++i) {
-            out.write(" ");
-            out.write(name);
-            out.write(" ");
-            arguments[i]->generateOperand(out);
-            if (i != arguments.size() - 1) {
-               out.write(")");
-            }
-         }
-         break;
-      }
-      case CallType::RightAssocOperator: { // a op (b op (c op d))
-         for (auto i = 0u; i != arguments.size(); ++i) {
-            arguments[i]->generateOperand(out);
-            if (i != arguments.size() - 1) {
-               out.write(" ");
-               out.write(name);
-               out.write(" ");
-               out.write("(");
-            }
-         }
-         for (auto i = 0u; i != arguments.size() - 2; ++i) {
-            out.write(")");
-         }
-         break;
-      }
-   }
+   throw std::runtime_error("ForeignCall is not implemented");
 }
 //---------------------------------------------------------------------------
 }
