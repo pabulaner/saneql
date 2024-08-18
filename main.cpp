@@ -59,8 +59,8 @@ int main(int argc, char* argv[]) {
          res.scalar()->generate(out);
       } else {
          Optimizer opt(std::move(res.table()));
-         opt.optimizeSelects();
-         // opt.optimizeJoins();
+         // opt.optimizeSelects();
+         opt.optimizeJoins();
          
          auto tree = opt.get();
          // outil::printTree(tree);

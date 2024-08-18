@@ -437,7 +437,7 @@ void IndexJoin::generate(CppWriter& out, std::function<void()> consume)
          out.writeType(c.iu->getType());
          out.write(" ");
          out.writeIU(c.iu.get());
-         out.writeln(" = ");
+         out.write(" = ");
 
          // assumes that the key IUs are the same order as the index IUs
          if (c.isKey) {
@@ -449,6 +449,7 @@ void IndexJoin::generate(CppWriter& out, std::function<void()> consume)
          out.writeln(";");
       }
 
+      consume();
       out.writeln("});");
    });
 }

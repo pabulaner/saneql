@@ -1,10 +1,2 @@
-supplier
-.join(lineitem.filter(l_receiptdate>l_commitdate).as(l1), s_suppkey=l1.l_suppkey)
-.join(orders.filter(o_orderstatus = 'F'), o_orderkey = l1.l_orderkey)
-.join(nation.filter(n_name = 'SAUDI ARABIA'), s_nationkey = n_nationkey)
-.map({s_nationkey2:=s_nationkey*2})
-.join(lineitem.as(l2), l2.l_orderkey = l1.l_orderkey && l2.l_suppkey = l1.l_suppkey)
-.join(lineitem.as(l3), l3.l_orderkey = l1.l_orderkey && l3.l_suppkey = l1.l_suppkey)
-.filter(n_name = 'BACKDAD')
-.groupby({s_name}, {numwait:=count()})
-.orderby({numwait, s_name})
+partsupp
+.join(part, p_partkey = ps_partkey)

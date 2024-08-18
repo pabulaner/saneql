@@ -70,7 +70,14 @@ void Optimizer::optimizeSelects() {
 }
 
 void Optimizer::optimizeJoins() {
-    /*outil::forEachModifiable<Join>(tree.get(), [&](Join* join) {
+    std::vector<Join*> joins;
+
+    outil::forEach<Join>(tree.get(), [&](Join* join) {
+        joins.push_back(join);
+        return true;
+    });
+
+    for (Join* join : joins) {
         // get the equi join key IUs
         auto keyIUs = outil::getJoinKeyIUs(join->left.get(), join->right.get(), join->condition.get());
         TableScan* left = dynamic_cast<TableScan*>(join->left.get());
@@ -109,7 +116,6 @@ void Optimizer::optimizeJoins() {
             *otherIUs = otherResult;
         };
 
-        bool isIndexJoin = false;
         std::unique_ptr<Operator> scan;
         std::unique_ptr<Operator> input;
         std::vector<const IU*> indexIUs;
@@ -117,19 +123,17 @@ void Optimizer::optimizeJoins() {
         // check if left or right can be index joined
         if (left && canBeIndexed(left->getKeyIUs(), keyIUs.first)) {
             orderKeyIUs(left->getKeyIUs(), &keyIUs.first, &keyIUs.second);
-            isIndexJoin = true;
             scan = std::move(join->left);
             input = std::move(join->right);
             indexIUs = std::move(keyIUs.second);
         } else if (right && canBeIndexed(right->getKeyIUs(), keyIUs.second)) {
             orderKeyIUs(right->getKeyIUs(), &keyIUs.second, &keyIUs.first);
-            isIndexJoin = true;
             scan = std::move(join->right);
             input = std::move(join->left);
             indexIUs = std::move(keyIUs.first);
         }
 
-        if (isIndexJoin) {
+        if (indexIUs.size() > 0) {
             Operator* out = outil::getOutputOperator(tree.get(), join);
             TableScan* scanCasted = static_cast<TableScan*>(scan.get());
             std::unique_ptr<IndexJoin> indexJoin = std::make_unique<IndexJoin>(std::move(scanCasted->name), std::move(scanCasted->columns), std::move(input), std::move(indexIUs));
@@ -149,9 +153,7 @@ void Optimizer::optimizeJoins() {
                 tree = std::move(indexJoin);
             }
         }
-
-        return true;
-    });*/
+    }
 }
 
 }

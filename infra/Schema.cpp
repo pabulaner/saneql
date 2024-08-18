@@ -62,7 +62,7 @@ void Schema::createTPCH()
       {"s_comment", Type::getVarchar(101), false}});
    createTable("partsupp", {
       {"ps_partkey", Type::getInteger(), true}, 
-      {"ps_suppkey", Type::getInteger(), false}, 
+      {"ps_suppkey", Type::getInteger(), true}, 
       {"ps_availqty", Type::getInteger(), false}, 
       {"ps_supplycost", Type::getDecimal(0, 0), false}, 
       {"ps_comment", Type::getVarchar(199), false}});

@@ -49,6 +49,10 @@ std::vector<Operator*> getInputOperators(Operator* target) {
 
 
 Operator* getOutputOperator(Operator* tree, Operator* target) {
+    if (!tree || !target) {
+        return nullptr;
+    }
+    
     for (auto in : getInputOperators(tree)) {
         if (in == target) {
             return tree;
