@@ -1,46 +1,76 @@
 #include "Optimizer.hpp"
 
+#include <iostream>
 #include "OperatorUtil.hpp"
 
 namespace adapter {
 
 void Optimizer::optimizeSelects() {
-    outil::forEachModifiable<Select>(tree.get(), [&](Select* select) {
-        // split the condition into the required parts
-        std::vector<std::unique_ptr<Expression>> required = cutil::splitRequired(std::move(select->condition));
+    std::vector<std::unique_ptr<Expression>> conditions;
 
-        // check for each required condition how far it can be pushed down
-        for (size_t i = 0; i < required.size(); i++) {
-            Operator* op = outil::getIUOperator(tree.get(), required[i]->getIUs());
-            tree = outil::insertSelectIfNotPresent(std::move(tree), op);
+    std::function<std::unique_ptr<Operator>(std::unique_ptr<Operator>)> extractConditions = [&](std::unique_ptr<Operator> tree) {
+        std::vector<std::unique_ptr<Operator>> inputs = tree->getInputs();
 
-            // cast is valid as a select statement was inserted after op
-            Select* insertedSelect = (Select*) outil::getOutputOperator(tree.get(), op);
-            insertedSelect->condition = insertedSelect->condition.get() 
-                ? cutil::combineRequired(std::move(insertedSelect->condition), std::move(required[i]))
-                : std::move(required[i]);
-
-            required.erase(required.begin() + (i--));
+        for (auto& in : inputs) {
+            in = extractConditions(std::move(in));
         }
 
-        if (required.size() > 0) {
-            // move all left other required conditions back in the operator where they came from
-            select->condition = std::move(required[0]);
+        tree->setInputs(std::move(inputs));
 
-            for (size_t i = 1; i < required.size(); i++) {
-                select->condition = std::make_unique<BinaryExpression>(std::move(select->condition), std::move(required[i]), saneql::Type::getBool(), BinaryExpression::And);
+        Select* select = dynamic_cast<Select*>(tree.get());
+
+        if (select) {
+            std::vector<std::unique_ptr<Expression>> required = cutil::splitRequired(std::move(select->condition));
+
+            for (auto& r : required) {
+                conditions.push_back(std::move(r));
             }
+
+            return std::move(select->input);
         } else {
-            // remove empty select statement
-            tree = outil::removeSelect(std::move(tree), select);
+            return tree;
+        }
+    };
+
+    auto insertAndGetSelect = [&](Operator* op) {
+        Operator* out = outil::getOutputOperator(tree.get(), op);
+        bool isSelect = dynamic_cast<Select*>(out);
+
+        if (!isSelect) {
+            if (out) {
+                std::vector<std::unique_ptr<Operator>> inputs = out->getInputs();
+
+                for (auto& in : inputs) {
+                    if (in.get() == op) {
+                        in = std::make_unique<Select>(std::move(in), nullptr);
+                    }
+                }
+
+                out->setInputs(std::move(inputs));
+            } else {
+                tree = std::make_unique<Select>(std::move(tree), nullptr);
+            }
         }
 
-        return true;
-    });
+        return static_cast<Select*>(outil::getOutputOperator(tree.get(), op));
+    };
+
+    tree = extractConditions(std::move(tree)); 
+
+    for (auto& c : conditions) {
+        Operator* op = outil::getIUOperator(tree.get(), c->getIUs());
+        Select* select = insertAndGetSelect(op);
+
+        if (select->condition.get()) {
+            select->condition = cutil::combineRequired(std::move(select->condition), std::move(c));
+        } else {
+            select->condition = std::move(c);
+        }
+    }
 }
 
 void Optimizer::optimizeJoins() {
-    outil::forEachModifiable<Join>(tree.get(), [&](Join* join) {
+    /*outil::forEachModifiable<Join>(tree.get(), [&](Join* join) {
         // get the equi join key IUs
         auto keyIUs = outil::getJoinKeyIUs(join->left.get(), join->right.get(), join->condition.get());
         TableScan* left = dynamic_cast<TableScan*>(join->left.get());
@@ -121,7 +151,7 @@ void Optimizer::optimizeJoins() {
         }
 
         return true;
-    });
+    });*/
 }
 
 }

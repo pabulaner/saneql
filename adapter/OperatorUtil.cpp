@@ -6,103 +6,62 @@ namespace adapter {
 
 namespace outil {
 
-void printTree(Operator* tree) {
-    size_t tabs = 0;
-    forEach<Operator>(tree, [&](Operator* op) {
-        Operator* out = op;
-        while (out = getOutputOperator(tree, out)) {
-            std::cout << '\t';
-        }
+void printTree(Operator* tree, size_t tabs) {
+    for (size_t i = 0; i < tabs; i++) {
+        std::cout << '\t';
+    }
 
-        if (dynamic_cast<TableScan*>(op)) {
-            std::cout << "TableScan" << std::endl;
-        }
-        if (dynamic_cast<Select*>(op)) {
-            std::cout << "Select" << std::endl;
-        }
-        if (dynamic_cast<Map*>(op)) {
-            std::cout << "Map" << std::endl;
-        }
-        if (dynamic_cast<Join*>(op)) {
-            std::cout << "Join" << std::endl;
-        }
-        if (dynamic_cast<GroupBy*>(op)) {
-            std::cout << "GroupBy" << std::endl;
-        }
-        if (dynamic_cast<Sort*>(op)) {
-            std::cout << "Sort" << std::endl;
-        }
+    if (!tree) {
+        std::cout << "nullptr" << std::endl;
+        return;
+    }
+    if (dynamic_cast<TableScan*>(tree)) {
+        std::cout << "TableScan" << std::endl;
+    }
+    if (dynamic_cast<Select*>(tree)) {
+        std::cout << "Select" << std::endl;
+    }
+    if (dynamic_cast<Map*>(tree)) {
+        std::cout << "Map" << std::endl;
+    }
+    if (dynamic_cast<Join*>(tree)) {
+        std::cout << "Join" << std::endl;
+    }
+    if (dynamic_cast<GroupBy*>(tree)) {
+        std::cout << "GroupBy" << std::endl;
+    }
+    if (dynamic_cast<Sort*>(tree)) {
+        std::cout << "Sort" << std::endl;
+    }
 
-        return true;
-    });
+    for (auto in : getInputOperators(tree)) {
+        printTree(in, tabs + 1);
+    }
 }
 
-std::unique_ptr<Operator> insertSelectIfNotPresent(std::unique_ptr<Operator> tree, Operator* target) {
-    if (tree.get() == target) {
-        return std::make_unique<Select>(std::move(tree), nullptr);
-    }
-    
-    Operator* out = getOutputOperator(tree.get(), target);
+std::vector<Operator*> getInputOperators(Operator* target) {
+    std::vector<std::unique_ptr<Operator>> inputs = target->getInputs();
+    std::vector<Operator*> result = vutil::map<Operator*>(inputs, [](const std::unique_ptr<Operator>& op) { return op.get(); });
 
-    // check if the output already is a select operator
-    if (dynamic_cast<Select*>(out)) {
-        return tree;
-    }
-
-    std::unique_ptr<Select> select = std::make_unique<Select>(std::unique_ptr<Operator>(target), nullptr);
-    std::vector<std::unique_ptr<Operator>> inputs = out->getInputs();
-
-    for (size_t i = 0; i < inputs.size(); i++) {
-        auto& in = inputs[i];
-        if (in.get() == target) {
-            // release the input so the target pointer is not deleted
-            in.release();
-            in = std::move(select);
-            
-            break;
-        }
-    }
-
-    out->setInputs(std::move(inputs));
-    return tree;
+    target->setInputs(std::move(inputs));
+    return result;
 }
 
-std::unique_ptr<Operator> removeSelect(std::unique_ptr<Operator> tree, Select* target) {
-    std::unique_ptr<Operator> input = std::move(target->getInputs()[0]);
-
-    if (tree.get() == target) {
-        return input;
-    }
-
-    Operator* out = getOutputOperator(tree.get(), target);
-    std::vector<std::unique_ptr<Operator>> inputs = out->getInputs();
-
-    for (size_t i = 0; i < inputs.size(); i++) {
-        auto& in = inputs[i];
-        if (in.get() == target) {
-            in = std::move(input);
-            break;
-        }
-    }
-
-    out->setInputs(std::move(inputs));
-    return tree;
-}
 
 Operator* getOutputOperator(Operator* tree, Operator* target) {
-    Operator* result = nullptr;
-    std::vector<std::unique_ptr<Operator>> inputs = tree->getInputs();
+    for (auto in : getInputOperators(tree)) {
+        if (in == target) {
+            return tree;
+        } 
 
-    for (auto& input : inputs) {
-        if (input.get() == target) {
-            result = tree;
-        } else {
-            result = getOutputOperator(input.get(), target);
+        Operator* out = getOutputOperator(in, target);
+
+        if (out) {
+            return out;
         }
     }
 
-    tree->setInputs(std::move(inputs));
-    return result;
+    return nullptr;
 }
 
 Operator* getIUOperator(Operator* tree, std::vector<const IU*> ius) {

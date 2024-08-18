@@ -19,7 +19,7 @@ std::vector<T> make(T&& arg) {
 template <typename T, typename... TArgs>
 std::vector<T> make(T&& arg, TArgs&&... args) {
     std::vector<T> result = make<T>(std::forward<TArgs>(args)...);
-    result.push_back(std::move(arg));
+    result.insert(result.begin(), std::move(arg));
 
     return result;
 }
