@@ -21,9 +21,13 @@ void forEach(Operator* tree, std::function<bool(TOp* op)> consumer) {
         return;
     }
 
-    for (auto input : tree->getInputs()) {
-        forEach(input, consumer);
+    std::vector<std::unique_ptr<Operator>> inputs = tree->getInputs();
+
+    for (auto& input : inputs) {
+        forEach(input.get(), consumer);
     }
+
+    tree->setInputs(std::move(inputs));
 }
 
 template <typename TOp>
@@ -36,7 +40,7 @@ void forEachModifiable(Operator* tree, std::function<bool(TOp* op)> consumer) {
     });
 
     for (TOp* op : ops) {
-        if (!consumer(op)) {
+        if (op && !consumer(op)) {
             return;
         }
     }

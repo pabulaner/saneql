@@ -2,10 +2,27 @@
 
 #include <vector>
 #include <algorithm>
+#include <memory>
 
 namespace adapter {
 
 namespace vutil {
+
+template <typename T>
+std::vector<T> make(T&& arg) {
+    std::vector<T> result;
+    result.push_back(std::move(arg));
+
+    return result;
+}
+
+template <typename T, typename... TArgs>
+std::vector<T> make(T&& arg, TArgs&&... args) {
+    std::vector<T> result = make<T>(std::forward<TArgs>(args)...);
+    result.push_back(std::move(arg));
+
+    return result;
+}
 
 template <typename T>
 bool contains(const std::vector<T>& vec, const T& value) {

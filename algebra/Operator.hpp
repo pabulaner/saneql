@@ -103,7 +103,7 @@ class Select : public Operator {
    // Get the IUs
    std::vector<const IU*> getIUs() const override { return input->getIUs(); }
    // Get the inputs
-   std::vector<std::unique_ptr<Operator>> getInputs() override { return { std::move(input) }; }
+   std::vector<std::unique_ptr<Operator>> getInputs() override { return vutil::make(std::move(input)); }
    // Set the inputs
    void setInputs(std::vector<std::unique_ptr<Operator>> inputs) override { input = std::move(inputs[0]); }
    // Generate SQL
@@ -130,7 +130,7 @@ class Map : public Operator {
    // Get the IUs
    std::vector<const IU*> getIUs() const override { return vutil::combine(input->getIUs(), vutil::map<const IU*>(computations, [](const Entry& e) { return e.iu.get(); })); }
    // Get the inputs
-   std::vector<std::unique_ptr<Operator>> getInputs() override { return { std::move(input) }; }
+   std::vector<std::unique_ptr<Operator>> getInputs() override { return vutil::make(std::move(input)); }
    // Set the inputs
    void setInputs(std::vector<std::unique_ptr<Operator>> inputs) override { input = std::move(inputs[0]); }
    // Generate SQL
@@ -201,7 +201,7 @@ class Join : public Operator {
    // Get the IUs
    std::vector<const IU*> getIUs() const override { return vutil::combine(left->getIUs(), right->getIUs()); }
    // Get the inputs
-   std::vector<std::unique_ptr<Operator>> getInputs() override { return { std::move(left), std::move(right) }; }
+   std::vector<std::unique_ptr<Operator>> getInputs() override { return vutil::make(std::move(left), std::move(right)); }
    // Set the inputs
    void setInputs(std::vector<std::unique_ptr<Operator>> inputs) override { left = std::move(inputs[0]); right = std::move(inputs[1]); }
    // Generate SQL
@@ -227,7 +227,7 @@ class GroupBy : public Operator, public AggregationLike {
    // Get the IUs
    std::vector<const IU*> getIUs() const override { return vutil::combine(vutil::map<const IU*>(groupBy, [](auto& value) { return value.iu.get(); }), vutil::map<const IU*>(aggregates, [](auto& value) { return value.iu.get(); })); }
    // Get the inputs
-   std::vector<std::unique_ptr<Operator>> getInputs() override { return { std::move(input) }; }
+   std::vector<std::unique_ptr<Operator>> getInputs() override { return vutil::make(std::move(input)); }
    // Set the inputs
    void setInputs(std::vector<std::unique_ptr<Operator>> inputs) override { input = std::move(inputs[0]); }
    // Generate SQL
@@ -260,7 +260,7 @@ class Sort : public Operator {
    // Get the IUs
    std::vector<const IU*> getIUs() const override { return input->getIUs(); }
    // Get the inputs
-   std::vector<std::unique_ptr<Operator>> getInputs() override { return { std::move(input) }; }
+   std::vector<std::unique_ptr<Operator>> getInputs() override { return vutil::make(std::move(input)); }
    // Set the inputs
    void setInputs(std::vector<std::unique_ptr<Operator>> inputs) override { input = std::move(inputs[0]); }
    // Generate SQL

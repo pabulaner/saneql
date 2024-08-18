@@ -33,7 +33,7 @@ void Schema::createTable(std::string name, std::initializer_list<Column> columns
 void Schema::createTPCH()
 // Create the TPC-H schema for experiments
 {
-   createTable("part_tpch", {
+   createTable("part", {
       {"p_partkey", Type::getInteger(), true}, 
       {"p_name", Type::getVarchar(55), false}, 
       {"p_mfgr", Type::getVarchar(25), false}, 
@@ -43,16 +43,16 @@ void Schema::createTPCH()
       {"p_container", Type::getVarchar(10), false}, 
       {"p_retailprice", Type::getDecimal(0, 0), false}, 
       {"p_comment", Type::getVarchar(23), false}});
-   createTable("region_tpch", {
+   createTable("region", {
       {"r_regionkey", Type::getInteger(), true}, 
       {"r_name", Type::getVarchar(25), false}, 
       {"r_comment", Type::getVarchar(152), false}});
-   createTable("nation_tpch", {
+   createTable("nation", {
       {"n_nationkey", Type::getInteger(), true}, 
       {"n_name", Type::getVarchar(25), false}, 
       {"n_regionkey", Type::getInteger(), false}, 
       {"n_comment", Type::getVarchar(152), false}});
-   createTable("supplier_tpch", {
+   createTable("supplier", {
       {"s_suppkey", Type::getInteger(), true}, 
       {"s_name", Type::getVarchar(25), false}, 
       {"s_address", Type::getVarchar(40), false}, 
@@ -60,13 +60,13 @@ void Schema::createTPCH()
       {"s_phone", Type::getVarchar(15), false}, 
       {"s_acctbal", Type::getDecimal(0, 0), false}, 
       {"s_comment", Type::getVarchar(101), false}});
-   createTable("partsupp_tpch", {
+   createTable("partsupp", {
       {"ps_partkey", Type::getInteger(), true}, 
       {"ps_suppkey", Type::getInteger(), false}, 
       {"ps_availqty", Type::getInteger(), false}, 
       {"ps_supplycost", Type::getDecimal(0, 0), false}, 
       {"ps_comment", Type::getVarchar(199), false}});
-   createTable("customer_tpch", {
+   createTable("customer", {
       {"c_custkey", Type::getInteger(), true}, 
       {"c_name", Type::getVarchar(25), false}, 
       {"c_address", Type::getVarchar(40), false}, 
@@ -75,7 +75,7 @@ void Schema::createTPCH()
       {"c_acctbal", Type::getDecimal(0, 0), false}, 
       {"c_mktsegment", Type::getVarchar(10), false}, 
       {"c_comment", Type::getVarchar(117), false}});
-   createTable("orders_tpch", {
+   createTable("orders", {
       {"o_orderkey", Type::getInteger(), true}, 
       {"o_custkey", Type::getInteger(), false}, 
       {"o_orderstatus", Type::getVarchar(1), false}, 
@@ -85,7 +85,7 @@ void Schema::createTPCH()
       {"o_clerk", Type::getVarchar(15), false}, 
       {"o_shippriority", Type::getInteger(), false}, 
       {"o_comment", Type::getVarchar(79), false}});
-   createTable("lineitem_tpch", {
+   createTable("lineitem", {
       {"l_orderkey", Type::getInteger(), true}, 
       {"l_partkey", Type::getInteger(), false}, 
       {"l_suppkey", Type::getInteger(), false}, 
@@ -225,7 +225,7 @@ void Schema::populateSchema()
    // For now we hard-code TPC-H for experiments
    createTPCH();
    // For now we hard-code TPC-C for vmcache
-   createTPCC();
+   // createTPCC();
 }
 //---------------------------------------------------------------------------
 const Schema::Table* Schema::lookupTable(const std::string& name) const
