@@ -1,2 +1,2 @@
-partsupp
-.join(part, p_partkey = ps_partkey)
+partsupp_tpch
+.join(part_tpch, p_partkey = ps_partkey)

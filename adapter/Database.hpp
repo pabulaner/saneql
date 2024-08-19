@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "vmcache/vmcache.hpp"
+#include "vmcache/tpcc/TPCCWorkload.hpp"
 #include "vmcache/tpcc/Schema.hpp"
 #include "vmcache/tpch/Schema.hpp"
 
@@ -37,6 +38,7 @@ class Database {
     vmcacheAdapter<supplier_tpch_t> supplier_tpch;
     vmcacheAdapter<partsupp_tpch_t> partsupp_tpch;
     vmcacheAdapter<customer_tpch_t> customer_tpch;
+    vmcacheAdapter<orders_tpch_t> orders_tpch;
     vmcacheAdapter<lineitem_tpch_t> lineitem_tpch;
     
     private:
@@ -44,7 +46,7 @@ class Database {
     TPCCWorkload<vmcacheAdapter> tpcc;
 
     /// The constructor
-    Database(u32 threadCount, u32 warehouseCount);
+    Database(u32 threadCount, u32 warehouseCount, const std::string& tpchPath);
 
     Database(const Database&) = delete;
     Database& operator=(const Database&) = delete;

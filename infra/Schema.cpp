@@ -33,7 +33,7 @@ void Schema::createTable(std::string name, std::initializer_list<Column> columns
 void Schema::createTPCH()
 // Create the TPC-H schema for experiments
 {
-   createTable("part", {
+   createTable("part_tpch", {
       {"p_partkey", Type::getInteger(), true}, 
       {"p_name", Type::getVarchar(55), false}, 
       {"p_mfgr", Type::getVarchar(25), false}, 
@@ -43,16 +43,16 @@ void Schema::createTPCH()
       {"p_container", Type::getVarchar(10), false}, 
       {"p_retailprice", Type::getDecimal(0, 0), false}, 
       {"p_comment", Type::getVarchar(23), false}});
-   createTable("region", {
+   createTable("region_tpch", {
       {"r_regionkey", Type::getInteger(), true}, 
       {"r_name", Type::getVarchar(25), false}, 
       {"r_comment", Type::getVarchar(152), false}});
-   createTable("nation", {
+   createTable("nation_tpch", {
       {"n_nationkey", Type::getInteger(), true}, 
       {"n_name", Type::getVarchar(25), false}, 
       {"n_regionkey", Type::getInteger(), false}, 
       {"n_comment", Type::getVarchar(152), false}});
-   createTable("supplier", {
+   createTable("supplier_tpch", {
       {"s_suppkey", Type::getInteger(), true}, 
       {"s_name", Type::getVarchar(25), false}, 
       {"s_address", Type::getVarchar(40), false}, 
@@ -60,13 +60,13 @@ void Schema::createTPCH()
       {"s_phone", Type::getVarchar(15), false}, 
       {"s_acctbal", Type::getDecimal(0, 0), false}, 
       {"s_comment", Type::getVarchar(101), false}});
-   createTable("partsupp", {
+   createTable("partsupp_tpch", {
       {"ps_partkey", Type::getInteger(), true}, 
-      {"ps_suppkey", Type::getInteger(), true}, 
+      {"ps_suppkey", Type::getInteger(), false}, 
       {"ps_availqty", Type::getInteger(), false}, 
       {"ps_supplycost", Type::getDecimal(0, 0), false}, 
       {"ps_comment", Type::getVarchar(199), false}});
-   createTable("customer", {
+   createTable("customer_tpch", {
       {"c_custkey", Type::getInteger(), true}, 
       {"c_name", Type::getVarchar(25), false}, 
       {"c_address", Type::getVarchar(40), false}, 
@@ -75,7 +75,7 @@ void Schema::createTPCH()
       {"c_acctbal", Type::getDecimal(0, 0), false}, 
       {"c_mktsegment", Type::getVarchar(10), false}, 
       {"c_comment", Type::getVarchar(117), false}});
-   createTable("orders", {
+   createTable("orders_tpch", {
       {"o_orderkey", Type::getInteger(), true}, 
       {"o_custkey", Type::getInteger(), false}, 
       {"o_orderstatus", Type::getVarchar(1), false}, 
@@ -85,7 +85,7 @@ void Schema::createTPCH()
       {"o_clerk", Type::getVarchar(15), false}, 
       {"o_shippriority", Type::getInteger(), false}, 
       {"o_comment", Type::getVarchar(79), false}});
-   createTable("lineitem", {
+   createTable("lineitem_tpch", {
       {"l_orderkey", Type::getInteger(), true}, 
       {"l_partkey", Type::getInteger(), false}, 
       {"l_suppkey", Type::getInteger(), false}, 

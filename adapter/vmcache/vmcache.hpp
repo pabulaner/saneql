@@ -30,6 +30,8 @@
 __thread uint16_t workerThreadId = 0;
 __thread int32_t tpcchistorycounter = 0;
 
+#include "Types.hpp"
+
 using namespace std;
 
 typedef uint8_t u8;
@@ -584,6 +586,12 @@ struct GuardS {
 u64 envOr(const char* env, u64 value) {
    if (getenv(env))
       return atof(getenv(env));
+   return value;
+}
+
+std::string envOr(const char* env, const std::string& value) {
+   if (getenv(env))
+      return getenv(env);
    return value;
 }
 
