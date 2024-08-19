@@ -1,2 +1,1 @@
-partsupp
-.join(part, p_partkey = ps_partkey)
+warehouse

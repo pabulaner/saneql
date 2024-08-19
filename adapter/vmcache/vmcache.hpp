@@ -316,7 +316,15 @@ struct BufferManager {
 };
 
 
-BufferManager bm;
+std::unique_ptr<BufferManager> bm;
+
+BufferManager* get_bm() {
+   if (bm.get() == nullptr) {
+      bm = std::make_unique<BufferManager>();
+   }
+
+   return bm.get();
+}
 
 struct OLCRestartException {};
 
@@ -328,7 +336,7 @@ struct GuardO {
    static const u64 moved = ~0ull;
 
    // constructor
-   explicit GuardO(u64 pid) : pid(pid), ptr(reinterpret_cast<T*>(bm.toPtr(pid))) {
+   explicit GuardO(u64 pid) : pid(pid), ptr(reinterpret_cast<T*>(get_bm()->toPtr(pid))) {
       init();
    }
 
@@ -336,7 +344,7 @@ struct GuardO {
    GuardO(u64 pid, GuardO<T2>& parent)  {
       parent.checkVersionAndRestart();
       this->pid = pid;
-      ptr = reinterpret_cast<T*>(bm.toPtr(pid));
+      ptr = reinterpret_cast<T*>(get_bm()->toPtr(pid));
       init();
    }
 
@@ -348,7 +356,7 @@ struct GuardO {
 
    void init() {
       assert(pid != moved);
-      PageState& ps = bm.getPageState(pid);
+      PageState& ps = get_bm()->getPageState(pid);
       for (u64 repeatCounter=0; ; repeatCounter++) {
          u64 v = ps.stateAndVersion.load();
          switch (PageState::getState(v)) {
@@ -364,8 +372,8 @@ struct GuardO {
                break;
             case PageState::Evicted:
                if (ps.tryLockX(v)) {
-                  bm.handleFault(pid);
-                  bm.unfixX(pid);
+                  get_bm()->handleFault(pid);
+                  get_bm()->unfixX(pid);
                }
                break;
             default:
@@ -396,7 +404,7 @@ struct GuardO {
 
    void checkVersionAndRestart() {
       if (pid != moved) {
-         PageState& ps = bm.getPageState(pid);
+         PageState& ps = get_bm()->getPageState(pid);
          u64 stateAndVersion = ps.stateAndVersion.load();
          if (version == stateAndVersion) // fast path, nothing changed
             return;
@@ -441,14 +449,14 @@ struct GuardX {
 
    // constructor
    explicit GuardX(u64 pid) : pid(pid) {
-      ptr = reinterpret_cast<T*>(bm.fixX(pid));
+      ptr = reinterpret_cast<T*>(get_bm()->fixX(pid));
       ptr->dirty = true;
    }
 
    explicit GuardX(GuardO<T>&& other) {
       assert(other.pid != moved);
       for (u64 repeatCounter=0; ; repeatCounter++) {
-         PageState& ps = bm.getPageState(other.pid);
+         PageState& ps = get_bm()->getPageState(other.pid);
          u64 stateAndVersion = ps.stateAndVersion;
          if ((stateAndVersion<<8) != (other.version<<8))
             throw OLCRestartException();
@@ -473,7 +481,7 @@ struct GuardX {
    // move assignment operator
    GuardX& operator=(GuardX&& other) {
       if (pid != moved) {
-         bm.unfixX(pid);
+         get_bm()->unfixX(pid);
       }
       pid = other.pid;
       ptr = other.ptr;
@@ -488,7 +496,7 @@ struct GuardX {
    // destructor
    ~GuardX() {
       if (pid != moved)
-         bm.unfixX(pid);
+         get_bm()->unfixX(pid);
    }
 
    T* operator->() {
@@ -498,7 +506,7 @@ struct GuardX {
 
    void release() {
       if (pid != moved) {
-         bm.unfixX(pid);
+         get_bm()->unfixX(pid);
          pid = moved;
       }
    }
@@ -508,9 +516,9 @@ template<class T>
 struct AllocGuard : public GuardX<T> {
    template <typename ...Params>
    AllocGuard(Params&&... params) {
-      GuardX<T>::ptr = reinterpret_cast<T*>(bm.allocPage());
+      GuardX<T>::ptr = reinterpret_cast<T*>(get_bm()->allocPage());
       new (GuardX<T>::ptr) T(std::forward<Params>(params)...);
-      GuardX<T>::pid = bm.toPID(GuardX<T>::ptr);
+      GuardX<T>::pid = get_bm()->toPID(GuardX<T>::ptr);
    }
 };
 
@@ -522,12 +530,12 @@ struct GuardS {
 
    // constructor
    explicit GuardS(u64 pid) : pid(pid) {
-      ptr = reinterpret_cast<T*>(bm.fixS(pid));
+      ptr = reinterpret_cast<T*>(get_bm()->fixS(pid));
    }
 
    GuardS(GuardO<T>&& other) {
       assert(other.pid != moved);
-      if (bm.getPageState(other.pid).tryLockS(other.version)) { // XXX: optimize?
+      if (get_bm()->getPageState(other.pid).tryLockS(other.version)) { // XXX: optimize?
          pid = other.pid;
          ptr = other.ptr;
          other.pid = moved;
@@ -539,7 +547,7 @@ struct GuardS {
 
    GuardS(GuardS&& other) {
       if (pid != moved)
-         bm.unfixS(pid);
+         get_bm()->unfixS(pid);
       pid = other.pid;
       ptr = other.ptr;
       other.pid = moved;
@@ -552,7 +560,7 @@ struct GuardS {
    // move assignment operator
    GuardS& operator=(GuardS&& other) {
       if (pid != moved)
-         bm.unfixS(pid);
+         get_bm()->unfixS(pid);
       pid = other.pid;
       ptr = other.ptr;
       other.pid = moved;
@@ -566,7 +574,7 @@ struct GuardS {
    // destructor
    ~GuardS() {
       if (pid != moved)
-         bm.unfixS(pid);
+         get_bm()->unfixS(pid);
    }
 
    T* operator->() {
@@ -576,7 +584,7 @@ struct GuardS {
 
    void release() {
       if (pid != moved) {
-         bm.unfixS(pid);
+         get_bm()->unfixS(pid);
          pid = moved;
       }
    }
@@ -1101,7 +1109,7 @@ struct BTreeNode : public BTreeNodeHeader {
          return false;
       copyKeyValueRange(&tmp, 0, 0, count);
       right->copyKeyValueRange(&tmp, count, 0, right->count);
-      PID pid = bm.toPID(this);
+      PID pid = get_bm()->toPID(this);
       memcpy(parent->getPayload(slotId+1).data(), &pid, sizeof(PID));
       parent->removeSlot(slotId);
       tmp.makeHint();
@@ -1195,7 +1203,7 @@ struct BTreeNode : public BTreeNodeHeader {
       nodeLeft->setFences(getLowerFence(), sep);
       nodeRight->setFences(sep, getUpperFence());
 
-      PID leftPID = bm.toPID(this);
+      PID leftPID = get_bm()->toPID(this);
       u16 oldParentSlot = parent->lowerBound(sep);
       if (oldParentSlot == parent->count) {
          assert(parent->upperInnerNode == leftPID);
@@ -1579,8 +1587,8 @@ typedef u64 KeyType;
 
 void handleSEGFAULT(int signo, siginfo_t* info, void* extra) {
    void* page = info->si_addr;
-   if (bm.isValidPtr(page)) {
-      cerr << "segfault restart " << bm.toPID(page) << endl;
+   if (get_bm()->isValidPtr(page)) {
+      cerr << "segfault restart " << get_bm()->toPID(page) << endl;
       throw OLCRestartException();
    } else {
       cerr << "segfault " << page << endl;

@@ -2,10 +2,6 @@
 #include "../Types.hpp"
 // -------------------------------------------------------------------------------------
 
-struct entry {
-    std::string name;
-};
-
 struct warehouse_t {
    static constexpr int id = 0;
    struct Key {

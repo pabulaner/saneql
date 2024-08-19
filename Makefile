@@ -3,7 +3,8 @@ PREFIX:=bin/
 all: $(PREFIX)saneql
 
 src:=parser/ASTBase.cpp parser/SaneQLLexer.cpp infra/Schema.cpp semana/Functions.cpp semana/SemanticAnalysis.cpp algebra/Expression.cpp algebra/Operator.cpp sql/SQLWriter.cpp adapter/ConditionUtil.cpp adapter/OperatorUtil.cpp adapter/Optimizer.cpp adapter/CppWriter.cpp main.cpp
-qsrc:=adapter/Database.cpp
+clisrc:=adapter/Database.cpp adapter/cli/Cmd.cpp adapter/cli/cli.cpp
+qsrc:=adapter/Database.cpp adapter/QueryFrame.cpp
 gensrc:=$(PREFIX)parser/saneql_parser.cpp
 obj:=$(addprefix $(PREFIX),$(src:.cpp=.o)) $(gensrc:.cpp=.o)
 
@@ -52,10 +53,14 @@ $(PREFIX)saneql: $(obj)
 $(PREFIX)astgen: $(PREFIX)makeutil/astgen.o
 	$(CXX) $(CXXFLAGS) -o$@ $^
 
+# cli
+cli:
+	$(CXX) $(CXXFLAGS) $(clisrc) -laio -o ./bin/cli
+
 # compile
 cquery:
 	./bin/saneql ./query/query.sane > ./adapter/resource/query.hpp
-	$(CXX) $(CXXFLAGS) $(qsrc) -laio -o ./bin/query
+	$(CXX) $(CXXFLAGS) $(qsrc) -laio -o ./bin/query -shared -fPIC
 
 # run
 rquery:
