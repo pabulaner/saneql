@@ -29,7 +29,6 @@
 
 __thread uint16_t workerThreadId = 0;
 __thread int32_t tpcchistorycounter = 0;
-#include "tpcc/TPCCWorkload.hpp"
 
 using namespace std;
 

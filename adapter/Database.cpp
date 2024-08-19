@@ -36,6 +36,7 @@ Database::Database(u32 threadCount, u32 warehouseCount)
         }
     }
 
+    // load tpcc
     tpcc.loadItem();
     tpcc.loadWarehouse();
 
@@ -49,6 +50,8 @@ Database::Database(u32 threadCount, u32 warehouseCount)
             }
         }
     });
+
+    // load tpch
 }
 
 } // namespace adapter
