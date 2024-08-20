@@ -42,7 +42,8 @@ Database::Database(u32 threadCount, u32 warehouseCount, const std::string& tpchP
         }
     }
 
-    // load tpcc
+    std::cout << "Loading TPCC..." << std::endl;
+    
     tpcc.loadItem();
     tpcc.loadWarehouse();
 
@@ -57,8 +58,9 @@ Database::Database(u32 threadCount, u32 warehouseCount, const std::string& tpchP
         }
     });
 
-    // load tpch
-    // tpch::Database tpchDB(tpchPath);
+    std::cout << "Finished loading TPCC!" << std::endl;
+    std::cout << "Loading TPCH..." << std::endl;
+
     auto fullPath = [&](const std::string& table) {
         return tpchPath + "/" + table + ".tbl";
     };
@@ -197,6 +199,8 @@ Database::Database(u32 threadCount, u32 warehouseCount, const std::string& tpchP
             });
         }
     }
+
+    std::cout << "Finished loading TPCH!" << std::endl;
 }
 
 } // namespace adapter

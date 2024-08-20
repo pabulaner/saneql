@@ -70,7 +70,9 @@ template <typename... Ts> struct TableImport {
 
   TableImport(const char *filename) : outputs(), input(filename) {}
 
-  TableImport(const std::string& filename) : outputs(), input(filename) {}
+  TableImport(const std::string& filename) : outputs(), input(filename) {
+    std::cout << "TableImport(" << filename << ")" << std::endl;
+  }
 
   TableImport(size_t size) : outputs(), input(size) {}
 
