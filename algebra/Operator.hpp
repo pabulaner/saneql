@@ -308,6 +308,30 @@ class InlineTable : public Operator {
    void generate(CppWriter& out, std::function<void()> consume) override;
 };
 //---------------------------------------------------------------------------
+/// A index scan operator
+class IndexScan : public Operator {
+   private:
+   /// The table name
+   std::string name;
+   /// The columns
+   std::vector<TableScan::Column> columns;
+   /// The index expressions
+   std::vector<std::unique_ptr<Expression>> indexExpressions;
+
+   public:
+   /// Constructor
+   IndexScan(std::string name, std::vector<TableScan::Column> columns, std::vector<std::unique_ptr<Expression>> indexExpressions);
+
+   // Get the IUs
+   std::vector<const IU*> getIUs() const override { return vutil::combine(vutil::map<const IU*>(columns, [](const TableScan::Column& c) { return c.iu.get(); }), input->getIUs()); }
+   // Get the inputs
+   std::vector<std::unique_ptr<Operator>> getInputs() override { throw std::runtime_error("Invalid operation on IndexScan"); }
+   // Set the inputs
+   void setInputs(std::vector<std::unique_ptr<Operator>> inputs) override { throw std::runtime_error("Invalid operation on IndexScan"); }
+   // Generate SQL
+   void generate(CppWriter& out, std::function<void()> consume) override;
+};
+//---------------------------------------------------------------------------
 /// A index join operator
 class IndexJoin : public Operator {
    private:
