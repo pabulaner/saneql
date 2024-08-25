@@ -323,7 +323,7 @@ class IndexScan : public Operator {
    IndexScan(std::string name, std::vector<TableScan::Column> columns, std::vector<std::unique_ptr<Expression>> indexExpressions);
 
    // Get the IUs
-   std::vector<const IU*> getIUs() const override { return vutil::combine(vutil::map<const IU*>(columns, [](const TableScan::Column& c) { return c.iu.get(); }), input->getIUs()); }
+   std::vector<const IU*> getIUs() const override { return vutil::map<const IU*>(columns, [](const TableScan::Column& c) { return c.iu.get(); }); }
    // Get the inputs
    std::vector<std::unique_ptr<Operator>> getInputs() override { throw std::runtime_error("Invalid operation on IndexScan"); }
    // Set the inputs

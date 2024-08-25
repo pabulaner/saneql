@@ -1,2 +1,2 @@
-partsupp_tpch
-.join(part_tpch, p_partkey = ps_partkey)
+nation_tpch
+.map({name:='name: ' + n_name})

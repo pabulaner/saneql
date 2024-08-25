@@ -36,7 +36,7 @@ void CppWriter::writeType(Type type) {
         case Type::Decimal: write("Numeric"); break;
         case Type::Char: write("Varchar<" + std::to_string(type.getLength()) + ">"); break;
         case Type::Varchar: write("Varchar<" + std::to_string(type.getLength()) + ">"); break;
-        case Type::Text: throw std::runtime_error("Unsupported type Text");
+        case Type::Text: write("Varchar<" + std::to_string(type.getLength()) + ">"); break;
         case Type::Date: write("Timestamp"); break;
         case Type::Interval: throw std::runtime_error("Unsupported type Interval");
     }

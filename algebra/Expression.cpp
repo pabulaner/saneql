@@ -46,7 +46,7 @@ void ConstExpression::generate(CppWriter& out)
       if ((type.getType() != Type::Char) && (type.getType() != Type::Varchar) && (type.getType() != Type::Text)) {
          out.write(value);
       } else {
-         out.write("\"" + value + "\"");
+         out.write("Varchar<" + std::to_string(value.size()) + ">(\"" + value + "\")");
       }
    }
 }
@@ -148,7 +148,7 @@ void BinaryExpression::generate(CppWriter& out)
          case Operation::Mul: out.write(" * "); break;
          case Operation::Div: out.write(" / "); break;
          case Operation::Mod: out.write(" % "); break;
-         case Operation::Concat: out.write(" + "); break;
+         case Operation::Concat: out.write(" || "); break;
          case Operation::And: out.write(" && "); break;
          case Operation::Or: out.write(" || "); break;
       }

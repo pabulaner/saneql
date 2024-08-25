@@ -62,10 +62,9 @@ struct Varchar {
    std::string toString() const { return std::string(data, length); };
 
    template <int otherMaxLength>
-   Varchar<maxLength> operator||(const Varchar<otherMaxLength>& other) const
+   Varchar<maxLength + otherMaxLength> operator||(const Varchar<otherMaxLength>& other) const
    {
-      Varchar<maxLength> tmp;
-      assert((static_cast<int32_t>(length) + other.length) <= maxLength);
+      Varchar<maxLength + otherMaxLength> tmp;
       tmp.length = length + other.length;
       memcpy(tmp.data, data, length);
       memcpy(tmp.data + length, other.data, other.length);
