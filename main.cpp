@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
       } else {
          Optimizer opt(std::move(res.table()));
          // opt.optimizeSelects();
-         opt.optimizeJoins();
+         // opt.optimizeJoins();
          
          auto tree = opt.get();
          // outil::printTree(tree);

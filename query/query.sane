@@ -1,2 +1,2 @@
-nation_tpch
-.map({name:='name: ' + n_name})
+customer_tpch
+    .orderby({c_name})
