@@ -225,7 +225,7 @@ void Schema::populateSchema()
    // For now we hard-code TPC-H for experiments
    createTPCH();
    // For now we hard-code TPC-C for vmcache
-   createTPCC();
+   // createTPCC();
 }
 //---------------------------------------------------------------------------
 const Schema::Table* Schema::lookupTable(const std::string& name) const

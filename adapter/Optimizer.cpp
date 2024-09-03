@@ -1,46 +1,174 @@
 #include "Optimizer.hpp"
 
+#include <iostream>
 #include "OperatorUtil.hpp"
 
 namespace adapter {
 
 void Optimizer::optimizeSelects() {
-    outil::forEachModifiable<Select>(tree.get(), [&](Select* select) {
-        // split the condition into the required parts
-        std::vector<std::unique_ptr<Expression>> required = cutil::splitRequired(std::move(select->condition));
+    std::vector<std::unique_ptr<Expression>> conditions;
 
-        // check for each required condition how far it can be pushed down
-        for (size_t i = 0; i < required.size(); i++) {
-            Operator* op = outil::getIUOperator(tree.get(), required[i]->getIUs());
-            tree = outil::insertSelectIfNotPresent(std::move(tree), op);
+    std::function<std::unique_ptr<Operator>(std::unique_ptr<Operator>)> extractConditions = [&](std::unique_ptr<Operator> tree) {
+        std::vector<std::unique_ptr<Operator>> inputs = tree->getInputs();
 
-            // cast is valid as a select statement was inserted after op
-            Select* insertedSelect = (Select*) outil::getOutputOperator(tree.get(), op);
-            insertedSelect->condition = insertedSelect->condition.get() 
-                ? cutil::combineRequired(std::move(insertedSelect->condition), std::move(required[i]))
-                : std::move(required[i]);
-
-            required.erase(required.begin() + (i--));
+        for (auto& in : inputs) {
+            in = extractConditions(std::move(in));
         }
 
-        if (required.size() > 0) {
-            // move all left other required conditions back in the operator where they came from
-            select->condition = std::move(required[0]);
+        tree->setInputs(std::move(inputs));
 
-            for (size_t i = 1; i < required.size(); i++) {
-                select->condition = std::make_unique<BinaryExpression>(std::move(select->condition), std::move(required[i]), saneql::Type::getBool(), BinaryExpression::And);
+        Select* select = dynamic_cast<Select*>(tree.get());
+
+        if (select) {
+            std::vector<std::unique_ptr<Expression>> required = cutil::splitRequired(std::move(select->condition));
+
+            for (auto& r : required) {
+                conditions.push_back(std::move(r));
             }
+
+            return std::move(select->input);
         } else {
-            // remove empty select statement
-            tree = outil::removeSelect(std::move(tree), select);
+            return tree;
+        }
+    };
+
+    auto insertAndGetSelect = [&](Operator* op) {
+        Operator* out = outil::getOutputOperator(tree.get(), op);
+        bool isSelect = dynamic_cast<Select*>(out);
+
+        if (!isSelect) {
+            if (out) {
+                std::vector<std::unique_ptr<Operator>> inputs = out->getInputs();
+
+                for (auto& in : inputs) {
+                    if (in.get() == op) {
+                        in = std::make_unique<Select>(std::move(in), nullptr);
+                    }
+                }
+
+                out->setInputs(std::move(inputs));
+            } else {
+                tree = std::make_unique<Select>(std::move(tree), nullptr);
+            }
         }
 
-        return true;
-    });
+        return static_cast<Select*>(outil::getOutputOperator(tree.get(), op));
+    };
+
+    tree = extractConditions(std::move(tree)); 
+
+    for (auto& c : conditions) {
+        Operator* op = outil::getIUOperator(tree.get(), c->getIUs());
+        Select* select = insertAndGetSelect(op);
+
+        if (select->condition.get()) {
+            select->condition = cutil::combineRequired(std::move(select->condition), std::move(c));
+        } else {
+            select->condition = std::move(c);
+        }
+    }
+}
+
+void Optimizer::optimizeScans() {
+    std::vector<TableScan*> scans = outil::getAll<TableScan>(tree.get());
+
+    // iterate over all scans to check if they can be converted to index scans and if so, convert them
+    for (TableScan* scan : scans) {
+        Select* select = dynamic_cast<Select*>(outil::getOutputOperator(tree.get(), scan));
+
+        if (!select) {
+            continue;
+        }
+
+        std::vector<const IU*> keyIUs = scan->getKeyIUs();
+        std::vector<std::unique_ptr<Expression>> required = cutil::splitRequired(std::move(select->condition));
+        std::vector<const IU*> indexIUs;
+        std::vector<std::unique_ptr<Expression>> indexExpressions;
+        std::vector<std::unique_ptr<Expression>> remainingExpressions;
+
+        // iterate over all required conditions and see if they contain all IUs required as the key to the table scan
+        for (auto& r : required) {
+            ComparisonExpression* c = dynamic_cast<ComparisonExpression*>(r.get());
+
+            // if true, comparison could be used as an index expression
+            if (c && c->mode == ComparisonExpression::Equal) {
+                IURef* leftAsIURef = dynamic_cast<IURef*>(c->left.get());
+                IURef* rightAsIURef = dynamic_cast<IURef*>(c->right.get());
+                size_t leftIUCount = c->left->getIUs().size();
+                size_t rightIUCount = c->right->getIUs().size();
+
+                if (leftAsIURef && rightIUCount == 0 && vutil::contains(keyIUs, leftAsIURef->getIU()) && !vutil::contains(indexIUs, leftAsIURef->getIU())) {
+                    indexIUs.push_back(leftAsIURef->getIU());
+                    indexExpressions.push_back(std::move(c->right));
+                } else if (rightAsIURef && leftIUCount == 0 && vutil::contains(keyIUs, rightAsIURef->getIU()) && !vutil::contains(indexIUs, rightAsIURef->getIU())) {
+                    indexIUs.push_back(rightAsIURef->getIU());
+                    indexExpressions.push_back(std::move(c->left));
+                }
+            } else {
+                remainingExpressions.push_back(std::move(r));
+            }
+        }
+
+        std::unique_ptr<Operator> indexScan;
+
+        // if true, scan can be converted to an index scan
+        if (indexIUs.size() == scan->getKeyIUs().size()) {
+            std::vector<std::unique_ptr<Expression>> sortedIndexExpressions;
+
+            for (auto iu : keyIUs) {
+                for (size_t i = 0; i < indexIUs.size(); i++) {
+                    if (indexIUs[i] == iu) {
+                        sortedIndexExpressions.push_back(std::move(indexExpressions[i]));
+                        break;
+                    }
+                }
+            }
+
+            indexScan = std::make_unique<IndexScan>(std::move(scan->name), std::move(scan->columns), std::move(sortedIndexExpressions));
+        } else {
+            for (auto& exp : indexExpressions) {
+                remainingExpressions.push_back(std::move(exp));
+            }
+        }
+
+        // insert the remaining expressions back into the select operator
+        if (remainingExpressions.size() > 0) {
+            select->condition = std::move(remainingExpressions[0]);
+
+            for (size_t i = 1; i < remainingExpressions.size(); i++) {
+                select->condition = cutil::combineRequired(std::move(select->condition), std::move(remainingExpressions[i]));
+            }
+        }
+
+        if (indexScan.get()) {
+            if (select->condition.get()) {
+                select->setInputs({std::move(indexScan)});
+            } else {
+                if (select == tree.get()) {
+                    tree = std::move(indexScan);
+                    break;
+                }
+                
+                Operator* out = outil::getOutputOperator(tree.get(), select);
+                std::vector<std::unique_ptr<Operator>> inputs = out->getInputs();
+
+                for (auto& in : inputs) {
+                    if (in.get() == select) {
+                        in = std::move(indexScan);
+                        break;
+                    }
+                }
+
+                out->setInputs(std::move(inputs));
+            }
+        }
+    }
 }
 
 void Optimizer::optimizeJoins() {
-    outil::forEachModifiable<Join>(tree.get(), [&](Join* join) {
+    std::vector<Join*> joins = outil::getAll<Join>(tree.get());
+
+    for (Join* join : joins) {
         // get the equi join key IUs
         auto keyIUs = outil::getJoinKeyIUs(join->left.get(), join->right.get(), join->condition.get());
         TableScan* left = dynamic_cast<TableScan*>(join->left.get());
@@ -79,34 +207,44 @@ void Optimizer::optimizeJoins() {
             *otherIUs = otherResult;
         };
 
-        Operator* out = outil::getOutputOperator(tree.get(), join);
-        std::unique_ptr<IndexJoin> indexJoin;
+        std::unique_ptr<Operator> scan;
+        std::unique_ptr<Operator> input;
+        std::vector<const IU*> indexIUs;
 
         // check if left or right can be index joined
         if (left && canBeIndexed(left->getKeyIUs(), keyIUs.first)) {
             orderKeyIUs(left->getKeyIUs(), &keyIUs.first, &keyIUs.second);
-            indexJoin = std::make_unique<IndexJoin>(std::move(join->left), std::move(join->right), keyIUs.second);
+            scan = std::move(join->left);
+            input = std::move(join->right);
+            indexIUs = std::move(keyIUs.second);
         } else if (right && canBeIndexed(right->getKeyIUs(), keyIUs.second)) {
             orderKeyIUs(right->getKeyIUs(), &keyIUs.second, &keyIUs.first);
-            indexJoin = std::make_unique<IndexJoin>(std::move(join->right), std::move(join->left), keyIUs.first);
+            scan = std::move(join->right);
+            input = std::move(join->left);
+            indexIUs = std::move(keyIUs.first);
         }
 
-        if (indexJoin.get()) {
+        if (indexIUs.size() > 0) {
+            Operator* out = outil::getOutputOperator(tree.get(), join);
+            TableScan* scanCasted = static_cast<TableScan*>(scan.get());
+            std::unique_ptr<IndexJoin> indexJoin = std::make_unique<IndexJoin>(std::move(scanCasted->name), std::move(scanCasted->columns), std::move(input), std::move(indexIUs));
+            
             if (out) {
-                std::vector<Operator*> inputs = out->getInputs();
+                std::vector<std::unique_ptr<Operator>> inputs = out->getInputs();
 
-                for (size_t i = 0; i < inputs.size(); i++) {
-                    if (inputs[i] == join) {
-                        inputs[i] = indexJoin.get();
+                for (auto& in : inputs) {
+                    if (in.get() == join) {
+                        in = std::move(indexJoin);
+                        break;
                     }
                 }
+
+                out->setInputs(std::move(inputs));
             } else {
-                indexJoin;
+                tree = std::move(indexJoin);
             }
         }
-
-        return true;
-    });
+    }
 }
 
 }

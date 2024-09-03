@@ -32,13 +32,13 @@ void CppWriter::writeType(Type type) {
     switch (type.getType()) {
         case Type::Unknown: write("auto"); break; // this can only happen for NULL values
         case Type::Bool: write("bool"); break;
-        case Type::Integer: write("int"); break;
-        case Type::Decimal: write("double"); break;
+        case Type::Integer: write("Integer"); break;
+        case Type::Decimal: write("Numeric"); break;
         case Type::Char: write("Varchar<" + std::to_string(type.getLength()) + ">"); break;
         case Type::Varchar: write("Varchar<" + std::to_string(type.getLength()) + ">"); break;
-        case Type::Text: write("text"); break;
-        case Type::Date: write("date"); break;
-        case Type::Interval: write("interval"); break;
+        case Type::Text: write("Varchar<" + std::to_string(type.getLength()) + ">"); break;
+        case Type::Date: write("Timestamp"); break;
+        case Type::Interval: throw std::runtime_error("Unsupported type Interval");
     }
 }
 

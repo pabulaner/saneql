@@ -396,7 +396,8 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeLiteral(const ast::L
    switch (literal.getSubType()) {
       case SubType::Integer: exp = make_unique<algebra::ConstExpression>(extractString(literal.arg), Type::getInteger()); break;
       case SubType::Float: exp = make_unique<algebra::ConstExpression>(extractString(literal.arg), inferDecimalType(*this, extractString(literal.arg))); break;
-      case SubType::String: exp = make_unique<algebra::ConstExpression>(extractString(literal.arg), Type::getText()); break;
+      // case SubType::String: exp = make_unique<algebra::ConstExpression>(extractString(literal.arg), Type::getText(); break;
+      case SubType::String: exp = make_unique<algebra::ConstExpression>(extractString(literal.arg), Type::getVarchar(extractString(literal.arg).size())); break;
       case SubType::True: exp = make_unique<algebra::ConstExpression>("true", Type::getBool()); break;
       case SubType::False: exp = make_unique<algebra::ConstExpression>("false", Type::getBool()); break;
       case SubType::Null: exp = make_unique<algebra::ConstExpression>(nullptr, Type::getUnknown().asNullable()); break;
@@ -447,7 +448,8 @@ SemanticAnalysis::ExpressionResult SemanticAnalysis::analyzeBinaryExpression(con
          Type resultType = ((lt.getType() < rt.getType()) ? rt : lt).withNullable(lt.isNullable() || rt.isNullable());
          return ExpressionResult(make_unique<algebra::BinaryExpression>(move(left.scalar()), move(right.scalar()), resultType, op), OrderingInfo::defaultOrder());
       } else if ((op == algebra::BinaryExpression::Operation::Plus) && isString(lt) && isString(rt)) {
-         Type resultType = Type::getText().withNullable(lt.isNullable() || rt.isNullable());
+         // Type resultType = Type::getText().withNullable(lt.isNullable() || rt.isNullable());
+         Type resultType = Type::getVarchar(lt.getLength() + rt.getLength());
          return ExpressionResult(make_unique<algebra::BinaryExpression>(move(left.scalar()), move(right.scalar()), resultType, algebra::BinaryExpression::Operation::Concat), OrderingInfo::defaultOrder());
       } else if ((lt.getType() == Type::Date) && (rt.getType() == Type::Interval) && ((op == algebra::BinaryExpression::Operation::Plus) || (op == algebra::BinaryExpression::Operation::Minus))) {
          Type resultType = Type::getDate().withNullable(lt.isNullable() || rt.isNullable());

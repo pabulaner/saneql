@@ -49,9 +49,9 @@ class Operator {
    // Get the IUs
    virtual std::vector<const IU*> getIUs() const { return {}; };
    // Get the inputs
-   virtual std::vector<Operator*> getInputs() { return {}; }
+   virtual std::vector<std::unique_ptr<Operator>> getInputs() { return {}; }
    // Set the inputs
-   virtual void setInputs(const std::vector<Operator*>& inputs) {}
+   virtual void setInputs(std::vector<std::unique_ptr<Operator>> inputs) {}
    // Generate SQL
    virtual void generate(CppWriter& out, std::function<void()> consume) = 0;
 };
@@ -85,6 +85,8 @@ class TableScan : public Operator {
    std::vector<const IU*> getKeyIUs() const;
    // Generate SQL
    void generate(CppWriter& out, std::function<void()> consume) override;
+
+   friend class adapter::Optimizer;
 };
 //---------------------------------------------------------------------------
 /// A select operator
@@ -101,9 +103,9 @@ class Select : public Operator {
    // Get the IUs
    std::vector<const IU*> getIUs() const override { return input->getIUs(); }
    // Get the inputs
-   std::vector<Operator*> getInputs() override { return { input.get() }; }
+   std::vector<std::unique_ptr<Operator>> getInputs() override { return vutil::make(std::move(input)); }
    // Set the inputs
-   void setInputs(const std::vector<Operator*>& inputs) override { input.release(); input.reset(inputs[0]); }
+   void setInputs(std::vector<std::unique_ptr<Operator>> inputs) override { input = std::move(inputs[0]); }
    // Generate SQL
    void generate(CppWriter& out, std::function<void()> consume) override;
 
@@ -128,9 +130,9 @@ class Map : public Operator {
    // Get the IUs
    std::vector<const IU*> getIUs() const override { return vutil::combine(input->getIUs(), vutil::map<const IU*>(computations, [](const Entry& e) { return e.iu.get(); })); }
    // Get the inputs
-   std::vector<Operator*> getInputs() override { return { input.get() }; }
+   std::vector<std::unique_ptr<Operator>> getInputs() override { return vutil::make(std::move(input)); }
    // Set the inputs
-   void setInputs(const std::vector<Operator*>& inputs) override { input.release(); input.reset(inputs[0]); }
+   void setInputs(std::vector<std::unique_ptr<Operator>> inputs) override { input = std::move(inputs[0]); }
    // Generate SQL
    void generate(CppWriter& out, std::function<void()> consume) override;
 };
@@ -199,9 +201,9 @@ class Join : public Operator {
    // Get the IUs
    std::vector<const IU*> getIUs() const override { return vutil::combine(left->getIUs(), right->getIUs()); }
    // Get the inputs
-   std::vector<Operator*> getInputs() override { return { left.get(), right.get() }; }
+   std::vector<std::unique_ptr<Operator>> getInputs() override { return vutil::make(std::move(left), std::move(right)); }
    // Set the inputs
-   void setInputs(const std::vector<Operator*>& inputs) override { left.release(); right.release(); left.reset(inputs[0]); right.reset(inputs[1]); }
+   void setInputs(std::vector<std::unique_ptr<Operator>> inputs) override { left = std::move(inputs[0]); right = std::move(inputs[1]); }
    // Generate SQL
    void generate(CppWriter& out, std::function<void()> consume) override;
 
@@ -225,9 +227,9 @@ class GroupBy : public Operator, public AggregationLike {
    // Get the IUs
    std::vector<const IU*> getIUs() const override { return vutil::combine(vutil::map<const IU*>(groupBy, [](auto& value) { return value.iu.get(); }), vutil::map<const IU*>(aggregates, [](auto& value) { return value.iu.get(); })); }
    // Get the inputs
-   std::vector<Operator*> getInputs() override { return { input.get() }; }
+   std::vector<std::unique_ptr<Operator>> getInputs() override { return vutil::make(std::move(input)); }
    // Set the inputs
-   void setInputs(const std::vector<Operator*>& inputs) override { input.release(); input.reset(inputs[0]); }
+   void setInputs(std::vector<std::unique_ptr<Operator>> inputs) override { input = std::move(inputs[0]); }
    // Generate SQL
    void generate(CppWriter& out, std::function<void()> consume) override;
 };
@@ -258,9 +260,9 @@ class Sort : public Operator {
    // Get the IUs
    std::vector<const IU*> getIUs() const override { return input->getIUs(); }
    // Get the inputs
-   std::vector<Operator*> getInputs() override { return { input.get() }; }
+   std::vector<std::unique_ptr<Operator>> getInputs() override { return vutil::make(std::move(input)); }
    // Set the inputs
-   void setInputs(const std::vector<Operator*>& inputs) override { input.release(); input.reset(inputs[0]); }
+   void setInputs(std::vector<std::unique_ptr<Operator>> inputs) override { input = std::move(inputs[0]); }
    // Generate SQL
    void generate(CppWriter& out, std::function<void()> consume) override;
 };
@@ -321,11 +323,11 @@ class IndexScan : public Operator {
    IndexScan(std::string name, std::vector<TableScan::Column> columns, std::vector<std::unique_ptr<Expression>> indexExpressions);
 
    // Get the IUs
-   std::vector<const IU*> getIUs() const override { return vutil::combine(vutil::map<const IU*>(columns, [](const TableScan::Column& c) { return c.iu.get(); }), input->getIUs()); }
+   std::vector<const IU*> getIUs() const override { return vutil::map<const IU*>(columns, [](const TableScan::Column& c) { return c.iu.get(); }); }
    // Get the inputs
-   std::vector<Operator*> getInputs() override { throw std::runtime_error("Invalid operation on IndexScan"); }
+   std::vector<std::unique_ptr<Operator>> getInputs() override { throw std::runtime_error("Invalid operation on IndexScan"); }
    // Set the inputs
-   void setInputs(const std::vector<Operator*>& inputs) override { throw std::runtime_error("Invalid operation on IndexScan"); }
+   void setInputs(std::vector<std::unique_ptr<Operator>> inputs) override { throw std::runtime_error("Invalid operation on IndexScan"); }
    // Generate SQL
    void generate(CppWriter& out, std::function<void()> consume) override;
 };
@@ -349,9 +351,9 @@ class IndexJoin : public Operator {
    // Get the IUs
    std::vector<const IU*> getIUs() const override { return vutil::combine(vutil::map<const IU*>(columns, [](const TableScan::Column& c) { return c.iu.get(); }), input->getIUs()); }
    // Get the inputs
-   std::vector<Operator*> getInputs() override { throw std::runtime_error("Invalid operation on IndexJoin"); }
+   std::vector<std::unique_ptr<Operator>> getInputs() override { throw std::runtime_error("Invalid operation on IndexJoin"); }
    // Set the inputs
-   void setInputs(const std::vector<Operator*>& inputs) override { throw std::runtime_error("Invalid operation on IndexJoin"); }
+   void setInputs(std::vector<std::unique_ptr<Operator>> inputs) override { throw std::runtime_error("Invalid operation on IndexJoin"); }
    // Generate SQL
    void generate(CppWriter& out, std::function<void()> consume) override;
 };

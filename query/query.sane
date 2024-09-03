@@ -1,4 +1,2 @@
-item
-.groupby({i_im_id}, {item_count:=count(), price_sum:=avg(i_price)})
-.orderby({i_im_id})
-.filter(item_count > 10)
+customer_tpch
+    .orderby({c_name})

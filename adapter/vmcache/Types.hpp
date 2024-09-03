@@ -27,12 +27,23 @@ struct Varchar {
    char data[maxLength] = {0};  // not '\0' terminated
 
    Varchar() : length(0) {}
+   Varchar(char c) {
+      assert(1 <= maxLength);
+      length = 1;
+      data[0] = c;
+   }
    Varchar(const char* str)
    {
       int l = strlen(str);
       assert(l <= maxLength);
       length = l;
       memcpy(data, str, l);
+   }
+   Varchar(const std::string_view& view)
+   {
+      assert(view.size() <= maxLength);
+      length = view.size();
+      memcpy(data, view.data(), view.size());
    }
    template <int otherMaxLength>
    Varchar(const Varchar<otherMaxLength>& other)
@@ -51,10 +62,9 @@ struct Varchar {
    std::string toString() const { return std::string(data, length); };
 
    template <int otherMaxLength>
-   Varchar<maxLength> operator||(const Varchar<otherMaxLength>& other) const
+   Varchar<maxLength + otherMaxLength> operator||(const Varchar<otherMaxLength>& other) const
    {
-      Varchar<maxLength> tmp;
-      assert((static_cast<int32_t>(length) + other.length) <= maxLength);
+      Varchar<maxLength + otherMaxLength> tmp;
       tmp.length = length + other.length;
       memcpy(tmp.data, data, length);
       memcpy(tmp.data + length, other.data, other.length);

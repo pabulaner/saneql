@@ -3,6 +3,9 @@
 #include <memory>
 
 #include "vmcache/vmcache.hpp"
+#include "vmcache/tpcc/TPCCWorkload.hpp"
+#include "vmcache/tpcc/Schema.hpp"
+#include "vmcache/tpch/Schema.hpp"
 
 namespace adapter {
 
@@ -15,7 +18,7 @@ class Database {
     /// Get the database instance
     static Database* getInstance();
 
-    /// The vmcache adapters
+    /// TPCC
     vmcacheAdapter<warehouse_t> warehouse;
     vmcacheAdapter<district_t> district;
     vmcacheAdapter<customer_t> customer;
@@ -27,13 +30,23 @@ class Database {
     vmcacheAdapter<orderline_t> orderline;
     vmcacheAdapter<item_t> item;
     vmcacheAdapter<stock_t> stock;
+
+    // TPCH
+    vmcacheAdapter<part_tpch_t> part_tpch;    
+    vmcacheAdapter<region_tpch_t> region_tpch;
+    vmcacheAdapter<nation_tpch_t> nation_tpch;
+    vmcacheAdapter<supplier_tpch_t> supplier_tpch;
+    vmcacheAdapter<partsupp_tpch_t> partsupp_tpch;
+    vmcacheAdapter<customer_tpch_t> customer_tpch;
+    vmcacheAdapter<orders_tpch_t> orders_tpch;
+    vmcacheAdapter<lineitem_tpch_t> lineitem_tpch;
     
     private:
     /// The tpcc workload
     TPCCWorkload<vmcacheAdapter> tpcc;
 
     /// The constructor
-    Database(u32 threadCount, u32 warehouseCount);
+    Database(u32 threadCount, u32 warehouseCount, const std::string& tpchPath);
 
     Database(const Database&) = delete;
     Database& operator=(const Database&) = delete;

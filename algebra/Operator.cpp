@@ -113,6 +113,11 @@ Join::Join(unique_ptr<Operator> left, unique_ptr<Operator> right, unique_ptr<Exp
 void Join::generate(CppWriter& out, std::function<void()> consume)
 // Generate SQL
 {
+   // validate
+   if (joinType != JoinType::Inner) {
+      throw std::runtime_error("Unsupported join type");
+   }
+
    std::pair<std::vector<const IU*>, std::vector<const IU*>> keyIUs = outil::getJoinKeyIUs(left.get(), right.get(), condition.get());
    std::vector<const IU*> leftKeyIUs = std::move(keyIUs.first);
    std::vector<const IU*> rightKeyIUs = std::move(keyIUs.second);
@@ -403,9 +408,10 @@ void InlineTable::generate(CppWriter&, std::function<void()>)
 {
    throw std::runtime_error("InlineTable is not implemented");
 }
+
 //---------------------------------------------------------------------------
 IndexJoin::IndexJoin(string name, vector<TableScan::Column> columns, unique_ptr<Operator> input, vector<const IU*> indexIUs) 
-   : name(move(name)), columns(move(columns)), input(move(input)), indexIUs(move(indexIUs)))
+   : name(move(name)), columns(move(columns)), input(move(input)), indexIUs(move(indexIUs))
 // Constructor
 {
 }
@@ -432,7 +438,7 @@ void IndexJoin::generate(CppWriter& out, std::function<void()> consume)
          out.writeType(c.iu->getType());
          out.write(" ");
          out.writeIU(c.iu.get());
-         out.writeln(" = ");
+         out.write(" = ");
 
          // assumes that the key IUs are the same order as the index IUs
          if (c.isKey) {
@@ -444,6 +450,7 @@ void IndexJoin::generate(CppWriter& out, std::function<void()> consume)
          out.writeln(";");
       }
 
+      consume();
       out.writeln("});");
    });
 }

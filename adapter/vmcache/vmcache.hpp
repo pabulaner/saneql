@@ -29,7 +29,8 @@
 
 __thread uint16_t workerThreadId = 0;
 __thread int32_t tpcchistorycounter = 0;
-#include "tpcc/TPCCWorkload.hpp"
+
+#include "Types.hpp"
 
 using namespace std;
 
@@ -588,6 +589,12 @@ u64 envOr(const char* env, u64 value) {
    return value;
 }
 
+std::string envOr(const char* env, const std::string& value) {
+   if (getenv(env))
+      return getenv(env);
+   return value;
+}
+
 BufferManager::BufferManager() : virtSize(envOr("VIRTGB", 16)*gb), physSize(envOr("PHYSGB", 4)*gb), virtCount(virtSize / pageSize), physCount(physSize / pageSize), residentSet(physCount) {
    assert(virtSize>=physSize);
    const char* path = getenv("BLOCK") ? getenv("BLOCK") : "/tmp/bm";
@@ -639,7 +646,7 @@ BufferManager::BufferManager() : virtSize(envOr("VIRTGB", 16)*gb), physSize(envO
    writeCount = 0;
    batch = envOr("BATCH", 64);
 
-   cerr << "vmcache " << "blk:" << path << " virtgb:" << virtSize/gb << " physgb:" << physSize/gb << " exmap:" << useExmap << endl;
+   // cerr << "vmcache " << "blk:" << path << " virtgb:" << virtSize/gb << " physgb:" << physSize/gb << " exmap:" << useExmap << endl;
 }
 
 void BufferManager::ensureFreePages() {
