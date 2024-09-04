@@ -33,7 +33,7 @@ class TreeOperator : public Operator {
 
 class Optimizer {
 private:
-    std::unique_ptr<TreeOperator> tree;
+    std::unique_ptr<Operator> tree;
 
 public:
     Optimizer(std::unique_ptr<Operator> tree) : tree(std::make_unique<TreeOperator>(std::move(tree))) {}

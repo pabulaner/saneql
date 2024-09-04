@@ -37,19 +37,15 @@ void Optimizer::optimizeSelects() {
         bool isSelect = dynamic_cast<Select*>(out);
 
         if (!isSelect) {
-            if (out) {
-                std::vector<std::unique_ptr<Operator>> inputs = out->getInputs();
+            std::vector<std::unique_ptr<Operator>> inputs = out->getInputs();
 
-                for (auto& in : inputs) {
-                    if (in.get() == op) {
-                        in = std::make_unique<Select>(std::move(in), nullptr);
-                    }
+            for (auto& in : inputs) {
+                if (in.get() == op) {
+                    in = std::make_unique<Select>(std::move(in), nullptr);
                 }
-
-                out->setInputs(std::move(inputs));
-            } else {
-                tree = std::make_unique<Select>(std::move(tree), nullptr);
             }
+
+            out->setInputs(std::move(inputs));
         }
 
         return static_cast<Select*>(outil::getOutputOperator(tree.get(), op));
@@ -144,11 +140,6 @@ void Optimizer::optimizeScans() {
             if (select->condition.get()) {
                 select->setInputs({std::move(indexScan)});
             } else {
-                if (select == tree.get()) {
-                    tree = std::move(indexScan);
-                    break;
-                }
-                
                 Operator* out = outil::getOutputOperator(tree.get(), select);
                 std::vector<std::unique_ptr<Operator>> inputs = out->getInputs();
 
@@ -228,21 +219,16 @@ void Optimizer::optimizeJoins() {
             Operator* out = outil::getOutputOperator(tree.get(), join);
             TableScan* scanCasted = static_cast<TableScan*>(scan.get());
             std::unique_ptr<IndexJoin> indexJoin = std::make_unique<IndexJoin>(std::move(scanCasted->name), std::move(scanCasted->columns), std::move(input), std::move(indexIUs));
-            
-            if (out) {
-                std::vector<std::unique_ptr<Operator>> inputs = out->getInputs();
+            std::vector<std::unique_ptr<Operator>> inputs = out->getInputs();
 
-                for (auto& in : inputs) {
-                    if (in.get() == join) {
-                        in = std::move(indexJoin);
-                        break;
-                    }
+            for (auto& in : inputs) {
+                if (in.get() == join) {
+                    in = std::move(indexJoin);
+                    break;
                 }
-
-                out->setInputs(std::move(inputs));
-            } else {
-                tree = std::move(indexJoin);
             }
+
+            out->setInputs(std::move(inputs));
         }
     }
 }
