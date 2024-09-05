@@ -1,10 +1,12 @@
 #include "Database.hpp"
 
+#include <map>
 #include <unordered_map>
 #include <vector>
 #include <tuple>
 #include <algorithm>
 
+#include "StringUtil.hpp"
 #include "vmcache/tpch/data/csv.hpp"
 #include "vmcache/tpch/data/table-reader.hpp"
 #include "vmcache/tpch/data/tpch.hpp"
@@ -227,5 +229,102 @@ struct hash<tuple<Args...>> {
 
 int main(int argc, char** argv) {
     Database* db = Database::getInstance();
+    // queries sorted by optimization and by name
+    std::map<std::string, std::map<std::string, std::function<void(Database*)>>> queries;
+
     #include "resource/query.hpp"
+
+    bool run = true;
+    while (run) {
+        std::string input;
+        std::getline(std::cin, input);
+
+        std::vector<std::string_view> params = sutil::split(input, ' ');
+        
+        if (params.size() == 0) {
+            continue;
+        }
+
+        if (params[0] == "exit") {
+            run = false;
+        } else if (params[0] == "help") {
+            std::cout << "Commands: help = print help" << std::endl;
+            std::cout << "          exit = exit the program" << std::endl;
+            std::cout << "          run [--file opt/name] --repeat x = runs the provided files (queries) x amount of times" << std::endl;
+        } else if (params[0] == "run") {
+            bool file = false;
+            bool repeat = false;
+
+            std::vector<std::string_view> fileValues;
+            size_t repeatValue = 1;
+
+            for (size_t i = 1; i < params.size(); i++) {
+                if (params[i] == "--file") {
+                    files = true;
+                } else if (params[i] == "--repeat") {
+                    repeat = true;
+                } else if (file) {
+                    files = false;
+                    fileValues.push_back(params[i]);
+                } else if (repeat) {
+                    repeat = false;
+                    repeatValue = std::atoi(params[i]);
+
+                    if (repeatValue == 0) {
+                        std::cout << "Invalid repeat value" << std::endl;
+                        continue;
+                    }
+                } else {
+                    std::cout << "Invalid syntax" << std::endl;
+                    continue;
+                }
+            }
+
+            if (files || repeat) {
+                std::cout << "Invalid syntax" << std::endl;
+                continue;
+            }
+
+            for (auto& file : fileValues) {
+                std::vector<std::string_view> optAndName = sutil::split(file, '/');
+
+                if (optAndName.size() != 2) {
+                    std::cout << "Invalid file name " << file << std::endl;
+                    continue;
+                }
+
+                std::string_view opt = optAndName[0];
+                std::string_view name = optAndName[1];
+
+                bool allOpts = opt == "*";
+                bool allNames = name == "*";
+
+                if (!allOpts && !queries.contains(opt)) {
+                    std::cout << "Invalid optimization name " << opt << std::endl;
+                    continue;
+                }
+
+                for (auto queriesByOpt : queries) {
+                    if (allOpts || queriesByOpt.first == opt) {
+                        if (!allNames && !queriesByOpt.second.contains(name)) {
+                            std::cout << "Invalid query name " << name << std::endl;
+                            continue; 
+                        }
+                    }
+                }
+
+                for (auto queriesByOpt : queries) {
+                    if (allOpts || queriesByOpt.first == opt) {
+                        for (auto queriesByName : queriesByOpt.second) {
+                            if (allNames || queriesByName.first == name) {
+                                for (size_t i = 0; i < repeatValue; i++) {
+                                    queriesByName.second(db);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

@@ -6,12 +6,15 @@ namespace adapter {
 class CppWriter;
 
 class CppCompiler {
+public:
     enum Flag : uint8_t {
+        None = 0x0,
         OptimizeSelects = 0x1,
         OptimizeScans = 0x2,
         OptimizeJoins = 0x4,
     };
 
+private:
     struct Input {
         std::string name;
         std::string content;
@@ -27,7 +30,7 @@ class CppCompiler {
     std::vector<Output> outputs;
 
 public:
-    CppCompiler(unsigned count, char** files, bool addDefaultOutput = true);
+    CppCompiler(unsigned count, char** files, bool addDefaultOutput = false);
 
     void addOutput(const std::string& name, uint8_t flags);
 
