@@ -2,6 +2,11 @@
 #include "adapter/CppCompiler.hpp"
 
 int main(int argc, char* argv[]) {
+   if (argc == 1) {
+      std::cout << "usage: " << argv[0] << " files..." << std::endl;
+      return 0;
+   }
+
    try {
       adapter::CppCompiler compiler(argc - 1, argv + 1);
 

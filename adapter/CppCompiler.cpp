@@ -46,7 +46,13 @@ void CppCompiler::compile(const std::string& output) const {
     CppWriter writer;
     writer.writeln("std::map<std::string, std::map<std::string, std::function<void(Database*)>>> queries = {");
 
+    bool first = true;
+    
     for (auto& output : outputs) {
+        if (first)
+            first = false;
+        else 
+            writer.write(", ");
         writeOutput(writer, output);
     }
 

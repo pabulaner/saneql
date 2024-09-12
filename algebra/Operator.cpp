@@ -408,7 +408,49 @@ void InlineTable::generate(CppWriter&, std::function<void()>)
 {
    throw std::runtime_error("InlineTable is not implemented");
 }
+//---------------------------------------------------------------------------
+IndexScan::IndexScan(std::string name, std::vector<TableScan::Column> columns, std::vector<std::unique_ptr<Expression>> indexExpressions) 
+   : name(move(name)), columns(move(columns)), indexExpressions(move(indexExpressions))
+// Constructor
+{
+}
+//---------------------------------------------------------------------------
+void IndexScan::generate(CppWriter& out, std::function<void()> consume)
+// Generate SQL
+{
+   out.write("db->" + name + ".lookup1({");
+      
+   bool first = true;
+   for (auto& e : indexExpressions) {
+      if (first)
+         first = false;
+      else
+         out.write(", ");
+      out.writeExpression(e.get());
+   }
 
+   out.writeln("}, [&](auto& value) {");
+
+   size_t i = 0;
+   for (auto& c : columns) {
+      out.writeType(c.iu->getType());
+      out.write(" ");
+      out.writeIU(c.iu.get());
+      out.write(" = ");
+
+      // assumes that the key IUs are the same order as the index expressions
+      if (c.isKey) {
+         out.writeExpression(indexExpressions[i++].get());
+      } else {
+         out.write("value." + c.name);
+      }
+
+      out.writeln(";");
+   }
+
+   consume();
+   out.writeln("});");
+}
 //---------------------------------------------------------------------------
 IndexJoin::IndexJoin(string name, vector<TableScan::Column> columns, unique_ptr<Operator> input, vector<const IU*> indexIUs) 
    : name(move(name)), columns(move(columns)), input(move(input)), indexIUs(move(indexIUs))

@@ -46,7 +46,7 @@ template <typename TOp>
 std::vector<TOp*> getAll(Operator* tree) {
     std::vector<TOp*> result;
 
-    forEach(tree, [&](TOp* op) {
+    forEach<TOp>(tree, [&](TOp* op) {
         result.push_back(op);
         return true;
     });

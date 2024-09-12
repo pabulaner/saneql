@@ -138,7 +138,7 @@ void Optimizer::optimizeScans() {
 
         if (indexScan.get()) {
             if (select->condition.get()) {
-                select->setInputs({std::move(indexScan)});
+                select->setInputs(vutil::make(std::move(indexScan)));
             } else {
                 Operator* out = outil::getOutputOperator(tree.get(), select);
                 std::vector<std::unique_ptr<Operator>> inputs = out->getInputs();
