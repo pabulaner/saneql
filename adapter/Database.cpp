@@ -250,7 +250,7 @@ int main(int argc, char** argv) {
         } else if (params[0] == "help") {
             std::cout << "Commands: help = print help" << std::endl;
             std::cout << "          exit = exit the program" << std::endl;
-            std::cout << "          run [--file opt/name] --repeat x = runs the provided files (queries) x amount of times" << std::endl;
+            std::cout << "          run [--file opt/name] --repeat number = runs the provided files (queries) a number of times" << std::endl;
         } else if (params[0] == "run") {
             bool file = false;
             bool repeat = false;
@@ -304,7 +304,7 @@ int main(int argc, char** argv) {
                     continue;
                 }
 
-                for (auto queriesByOpt : queries) {
+                for (auto& queriesByOpt : queries) {
                     if (allOpts || queriesByOpt.first == opt) {
                         if (!allNames && !queriesByOpt.second.contains(name)) {
                             std::cout << "Invalid query name " << name << std::endl;
@@ -313,9 +313,9 @@ int main(int argc, char** argv) {
                     }
                 }
 
-                for (auto queriesByOpt : queries) {
+                for (auto& queriesByOpt : queries) {
                     if (allOpts || queriesByOpt.first == opt) {
-                        for (auto queriesByName : queriesByOpt.second) {
+                        for (auto& queriesByName : queriesByOpt.second) {
                             if (allNames || queriesByName.first == name) {
                                 for (size_t i = 0; i < repeatValue; i++) {
                                     queriesByName.second(db);
