@@ -324,10 +324,6 @@ class IndexScan : public Operator {
 
    // Get the IUs
    std::vector<const IU*> getIUs() const override { return vutil::map<const IU*>(columns, [](const TableScan::Column& c) { return c.iu.get(); }); }
-   // Get the inputs
-   std::vector<std::unique_ptr<Operator>> getInputs() override { throw std::runtime_error("Invalid operation on IndexScan"); }
-   // Set the inputs
-   void setInputs(std::vector<std::unique_ptr<Operator>> inputs) override { throw std::runtime_error("Invalid operation on IndexScan"); }
    // Generate SQL
    void generate(CppWriter& out, std::function<void()> consume) override;
 };
@@ -351,9 +347,9 @@ class IndexJoin : public Operator {
    // Get the IUs
    std::vector<const IU*> getIUs() const override { return vutil::combine(vutil::map<const IU*>(columns, [](const TableScan::Column& c) { return c.iu.get(); }), input->getIUs()); }
    // Get the inputs
-   std::vector<std::unique_ptr<Operator>> getInputs() override { throw std::runtime_error("Invalid operation on IndexJoin"); }
+   std::vector<std::unique_ptr<Operator>> getInputs() override { return vutil::make(std::move(input)); }
    // Set the inputs
-   void setInputs(std::vector<std::unique_ptr<Operator>> inputs) override { throw std::runtime_error("Invalid operation on IndexJoin"); }
+   void setInputs(std::vector<std::unique_ptr<Operator>> inputs) override { input = std::move(inputs[0]); }
    // Generate SQL
    void generate(CppWriter& out, std::function<void()> consume) override;
 };

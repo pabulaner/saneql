@@ -14,24 +14,24 @@ void printTree(Operator* tree, size_t tabs) {
     if (!tree) {
         std::cout << "nullptr" << std::endl;
         return;
-    }
-    if (dynamic_cast<TableScan*>(tree)) {
+    } else if (dynamic_cast<TableScan*>(tree)) {
         std::cout << "TableScan" << std::endl;
-    }
-    if (dynamic_cast<Select*>(tree)) {
+    } else if (dynamic_cast<Select*>(tree)) {
         std::cout << "Select" << std::endl;
-    }
-    if (dynamic_cast<Map*>(tree)) {
+    } else if (dynamic_cast<Map*>(tree)) {
         std::cout << "Map" << std::endl;
-    }
-    if (dynamic_cast<Join*>(tree)) {
+    } else if (dynamic_cast<Join*>(tree)) {
         std::cout << "Join" << std::endl;
-    }
-    if (dynamic_cast<GroupBy*>(tree)) {
+    } else if (dynamic_cast<GroupBy*>(tree)) {
         std::cout << "GroupBy" << std::endl;
-    }
-    if (dynamic_cast<Sort*>(tree)) {
+    } else if (dynamic_cast<Sort*>(tree)) {
         std::cout << "Sort" << std::endl;
+    } else if (dynamic_cast<IndexScan*>(tree)) {
+        std::cout << "IndexScan" << std::endl;
+    } else if (dynamic_cast<IndexJoin*>(tree)) {
+        std::cout << "IndexJoin" << std::endl;
+    } else {
+        std::cout << "Unknown" << std::endl;
     }
 
     for (auto in : getInputOperators(tree)) {

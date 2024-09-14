@@ -1,2 +1,3 @@
-customer_tpch
-    .orderby({c_name})
+warehouse
+    .orderby({w_name})
+    .filter(w_id=1 && w_name='hello')

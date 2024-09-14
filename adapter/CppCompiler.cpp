@@ -46,27 +46,26 @@ void CppCompiler::compile(const std::string& output) const {
     CppWriter writer;
     writer.writeln("std::map<std::string, std::map<std::string, std::function<void(Database*)>>> queries = {");
 
-    bool first = true;
-    
     for (auto& output : outputs) {
-        if (first)
-            first = false;
-        else 
-            writer.write(", ");
-        writeOutput(writer, output);
+        CppWriter w;
+        writeOutput(w, output);
+        writer.writeln(w.getResult() + ",");
     }
 
     writer.writeln("};");
+    std::ofstream outputFile(output);
+    outputFile << writer.getResult();
+    outputFile.close();
 }
 
 void CppCompiler::writeOutput(CppWriter& writer, const Output& output) const {
     Schema schema;
     schema.populateSchema();
     
-    writer.writeln("{" + output.name + ", {");
+    writer.writeln("{\"" + output.name + "\", {");
 
     for (auto& in : inputs) {
-        writer.writeln("{" + in.name + ", [](Database* db) {");
+        writer.writeln("{\"" + in.name + "\", [](Database* db) {");
 
         ASTContainer container;
         ast::AST* tree = nullptr;
@@ -102,7 +101,7 @@ void CppCompiler::writeOutput(CppWriter& writer, const Output& output) const {
         writer.writeln("}},");
     }
 
-    writer.writeln("}},");
+    writer.write("}}");
 }
 
 }

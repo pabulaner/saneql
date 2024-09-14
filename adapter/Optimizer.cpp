@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include "OperatorUtil.hpp"
+#include "semana/SemanticAnalysis.hpp"
 
 namespace adapter {
 
@@ -67,6 +68,8 @@ void Optimizer::optimizeSelects() {
 
 void Optimizer::optimizeScans() {
     std::vector<TableScan*> scans = outil::getAll<TableScan>(tree.get());
+    std::cout << "before:" << std::endl;
+    outil::printTree(tree.get());
 
     // iterate over all scans to check if they can be converted to index scans and if so, convert them
     for (TableScan* scan : scans) {
@@ -99,6 +102,8 @@ void Optimizer::optimizeScans() {
                 } else if (rightAsIURef && leftIUCount == 0 && vutil::contains(keyIUs, rightAsIURef->getIU()) && !vutil::contains(indexIUs, rightAsIURef->getIU())) {
                     indexIUs.push_back(rightAsIURef->getIU());
                     indexExpressions.push_back(std::move(c->left));
+                } else {
+                    remainingExpressions.push_back(std::move(r));
                 }
             } else {
                 remainingExpressions.push_back(std::move(r));
@@ -122,8 +127,8 @@ void Optimizer::optimizeScans() {
 
             indexScan = std::make_unique<IndexScan>(std::move(scan->name), std::move(scan->columns), std::move(sortedIndexExpressions));
         } else {
-            for (auto& exp : indexExpressions) {
-                remainingExpressions.push_back(std::move(exp));
+            for (size_t i = 0; i < indexIUs.size(); i++) {
+                remainingExpressions.push_back(std::make_unique<ComparisonExpression>(std::make_unique<IURef>(indexIUs[i]), std::move(indexExpressions[i]), ComparisonExpression::Equal, saneql::Collate::None));
             }
         }
 
@@ -154,6 +159,9 @@ void Optimizer::optimizeScans() {
             }
         }
     }
+
+    std::cout << "after:" << std::endl;
+    outil::printTree(tree.get());
 }
 
 void Optimizer::optimizeJoins() {

@@ -5,6 +5,6 @@
 
 namespace sutil {
 
-std::vector<std::string_view> split(const std::string& str, char sep);
+std::vector<std::string_view> split(const std::string_view& str, char sep);
 
 }

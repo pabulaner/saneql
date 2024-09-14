@@ -7,6 +7,7 @@
 #include <algorithm>
 
 #include "StringUtil.hpp"
+#include "PerfEvent.hpp"
 #include "vmcache/tpch/data/csv.hpp"
 #include "vmcache/tpch/data/table-reader.hpp"
 #include "vmcache/tpch/data/tpch.hpp"
@@ -61,6 +62,7 @@ Database::Database(u32 threadCount, u32 warehouseCount, const std::string& tpchP
     });
 
     std::cout << "Finished loading TPCC!" << std::endl;
+    return;
     std::cout << "Loading TPCH..." << std::endl;
 
     auto fullPath = [&](const std::string& table) {
@@ -229,46 +231,59 @@ struct hash<tuple<Args...>> {
 
 int main(int argc, char** argv) {
     Database* db = Database::getInstance();
-    // queries sorted by optimization and by name
-    std::map<std::string, std::map<std::string, std::function<void(Database*)>>> queries;
 
+    // queries sorted by optimization and by name
     #include "resource/query.hpp"
 
     bool run = true;
     while (run) {
+        std::cout << "database> ";
+
         std::string input;
         std::getline(std::cin, input);
 
         std::vector<std::string_view> params = sutil::split(input, ' ');
+        for (auto& p : params) {
+            std::cout << "p: " << p << std::endl;
+        }
         
         if (params.size() == 0) {
             continue;
         }
 
-        if (params[0] == "exit") {
-            run = false;
-        } else if (params[0] == "help") {
+        if (params[0] == "help") {
             std::cout << "Commands: help = print help" << std::endl;
             std::cout << "          exit = exit the program" << std::endl;
-            std::cout << "          run [--file opt/name] --repeat number = runs the provided files (queries) a number of times" << std::endl;
+            std::cout << "          ls = list optimizations and files" << std::endl;
+            std::cout << "          run [--file opt:name] --repeat number = runs the provided files (queries) a number of times" << std::endl;
+        } else if (params[0] == "exit") {
+            run = false;
+        } else if (params[0] == "ls") {
+            for (auto& opts : queries) {
+                for (auto& names : opts.second) {
+                    std::cout << opts.first << ":" << names.first << std::endl;
+                }
+            }
         } else if (params[0] == "run") {
-            bool file = false;
-            bool repeat = false;
+            bool fileParam = false;
+            bool repeatParam = false;
 
             std::vector<std::string_view> fileValues;
             size_t repeatValue = 1;
 
             for (size_t i = 1; i < params.size(); i++) {
-                if (params[i] == "--file") {
-                    files = true;
-                } else if (params[i] == "--repeat") {
-                    repeat = true;
-                } else if (file) {
-                    files = false;
+                bool param = fileParam || repeatParam;
+
+                if (params[i] == "--file" && !param) {
+                    fileParam = true;
+                } else if (params[i] == "--repeat" && !param) {
+                    repeatParam = true;
+                } else if (fileParam) {
+                    fileParam = false;
                     fileValues.push_back(params[i]);
-                } else if (repeat) {
-                    repeat = false;
-                    repeatValue = std::atoi(params[i]);
+                } else if (repeatParam) {
+                    repeatParam = false;
+                    repeatValue = std::atoi(params[i].data());
 
                     if (repeatValue == 0) {
                         std::cout << "Invalid repeat value" << std::endl;
@@ -280,13 +295,13 @@ int main(int argc, char** argv) {
                 }
             }
 
-            if (files || repeat) {
+            if (fileParam || repeatParam) {
                 std::cout << "Invalid syntax" << std::endl;
                 continue;
             }
 
             for (auto& file : fileValues) {
-                std::vector<std::string_view> optAndName = sutil::split(file, '/');
+                std::vector<std::string_view> optAndName = sutil::split(file, ':');
 
                 if (optAndName.size() != 2) {
                     std::cout << "Invalid file name " << file << std::endl;
@@ -296,30 +311,39 @@ int main(int argc, char** argv) {
                 std::string_view opt = optAndName[0];
                 std::string_view name = optAndName[1];
 
+                std::cout << "o: " << opt << ", n: " << name << std::endl;
+
                 bool allOpts = opt == "*";
                 bool allNames = name == "*";
 
-                if (!allOpts && !queries.contains(opt)) {
+                if (!allOpts && !queries.contains(std::string(opt))) {
                     std::cout << "Invalid optimization name " << opt << std::endl;
                     continue;
                 }
 
                 for (auto& queriesByOpt : queries) {
                     if (allOpts || queriesByOpt.first == opt) {
-                        if (!allNames && !queriesByOpt.second.contains(name)) {
+                        if (!allNames && !queriesByOpt.second.contains(std::string(name))) {
                             std::cout << "Invalid query name " << name << std::endl;
                             continue; 
                         }
                     }
                 }
 
+                PerfEvent e;
+
                 for (auto& queriesByOpt : queries) {
                     if (allOpts || queriesByOpt.first == opt) {
                         for (auto& queriesByName : queriesByOpt.second) {
                             if (allNames || queriesByName.first == name) {
+                                e.startCounters();
                                 for (size_t i = 0; i < repeatValue; i++) {
                                     queriesByName.second(db);
                                 }
+                                e.stopCounters();
+
+                                std::cout << queriesByOpt.first << ":" << queriesByName.first << ":" << std::endl;
+                                e.printReport(std::cout, repeatValue);
                             }
                         }
                     }
