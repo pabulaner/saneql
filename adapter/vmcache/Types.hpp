@@ -17,6 +17,7 @@ using s64 = int64_t;
 using UInteger = u32;
 using Integer = s32;
 using Timestamp = s64;
+using Interval = s64;
 using Numeric = double;
 static constexpr Integer minUInteger = std::numeric_limits<UInteger>::min();
 static constexpr Integer minInteger = std::numeric_limits<Integer>::min();
@@ -51,6 +52,24 @@ struct Varchar {
       assert(other.length <= maxLength);
       length = other.length;
       memcpy(data, other.data, length);
+   }
+
+   explicit operator Timestamp() const {
+      if (length != sizeof("0000-00-00") - 1 || data[4] != '-' || data[7] != '-') {
+         return 0;
+      }
+
+      std::string str(data, length);
+
+      int year = std::stoi(str.substr(0, 4));
+      int month = std::stoi(str.substr(5, 2));
+      int day = std::stoi(str.substr(8, 2));
+
+      unsigned a = (14 - month) / 12;
+      unsigned y = year + 4800 - a;
+      unsigned m = month + (12 * a) - 3;
+      return day + ((153 * m + 2) / 5) + (365 * y) + (y / 4) - (y / 100) +
+            (y / 400) - 32045;
    }
 
    void append(char x)

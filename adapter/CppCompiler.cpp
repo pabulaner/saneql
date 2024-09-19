@@ -44,7 +44,7 @@ void CppCompiler::addOutput(const std::string& name, uint8_t flags) {
 
 void CppCompiler::compile(const std::string& output) const {
     CppWriter writer;
-    writer.writeln("std::map<std::string, std::map<std::string, std::function<void(Database*)>>> queries = {");
+    writer.writeln("std::map<std::string, std::map<std::string, std::function<void(Database*, size_t)>>> queries = {");
 
     for (auto& output : outputs) {
         CppWriter w;
@@ -65,7 +65,7 @@ void CppCompiler::writeOutput(CppWriter& writer, const Output& output) const {
     writer.writeln("{\"" + output.name + "\", {");
 
     for (auto& in : inputs) {
-        writer.writeln("{\"" + in.name + "\", [](Database* db) {");
+        writer.writeln("{\"" + in.name + "\", [](Database* db, size_t limit) {");
 
         ASTContainer container;
         ast::AST* tree = nullptr;
@@ -85,6 +85,8 @@ void CppCompiler::writeOutput(CppWriter& writer, const Output& output) const {
 
             auto tree = opt.get();
             tree->generate(writer, [&]() {
+                writer.writeln("if (limit > 0) {");
+                writer.writeln("limit -= 1;");
                 writer.write("std::cout << ");
                 bool first = true;
                 for (auto iu : tree->getIUs()) {
@@ -95,6 +97,7 @@ void CppCompiler::writeOutput(CppWriter& writer, const Output& output) const {
                     writer.writeIU(iu);
                 }
                 writer.writeln(" << std::endl;");
+                writer.writeln("}");
             });
         }
 

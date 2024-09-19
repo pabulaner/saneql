@@ -331,21 +331,17 @@ class IndexScan : public Operator {
 /// A index join operator
 class IndexJoin : public Operator {
    private:
-   /// The table name
-   std::string name;
-   /// The columns
-   std::vector<TableScan::Column> columns;
    /// The input
    std::unique_ptr<Operator> input;
-   /// The index IUs
-   std::vector<const IU*> indexIUs;
+   /// The index scan
+   std::unique_ptr<IndexScan> indexScan;
 
    public:
    /// Constructor
-   IndexJoin(std::string name, std::vector<TableScan::Column> columns, std::unique_ptr<Operator> input, std::vector<const IU*> indexIUs);
+   IndexJoin(std::unique_ptr<Operator> input, std::unique_ptr<IndexScan> indexScan);
 
    // Get the IUs
-   std::vector<const IU*> getIUs() const override { return vutil::combine(vutil::map<const IU*>(columns, [](const TableScan::Column& c) { return c.iu.get(); }), input->getIUs()); }
+   std::vector<const IU*> getIUs() const override { return vutil::combine(input->getIUs(), indexScan->getIUs()); }
    // Get the inputs
    std::vector<std::unique_ptr<Operator>> getInputs() override { return vutil::make(std::move(input)); }
    // Set the inputs

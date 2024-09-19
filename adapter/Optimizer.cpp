@@ -226,7 +226,10 @@ void Optimizer::optimizeJoins() {
         if (indexIUs.size() > 0) {
             Operator* out = outil::getOutputOperator(tree.get(), join);
             TableScan* scanCasted = static_cast<TableScan*>(scan.get());
-            std::unique_ptr<IndexJoin> indexJoin = std::make_unique<IndexJoin>(std::move(scanCasted->name), std::move(scanCasted->columns), std::move(input), std::move(indexIUs));
+            
+            std::vector<std::unique_ptr<Expression>> indexIURefs = vutil::map<std::unique_ptr<Expression>>(indexIUs, [](const IU* iu) { return std::make_unique<IURef>(iu); });
+            std::unique_ptr<IndexScan> indexScan = std::make_unique<IndexScan>(std::move(scanCasted->name), std::move(scanCasted->columns), std::move(indexIURefs));
+            std::unique_ptr<IndexJoin> indexJoin = std::make_unique<IndexJoin>(std::move(input), std::move(indexScan));
             std::vector<std::unique_ptr<Operator>> inputs = out->getInputs();
 
             for (auto& in : inputs) {
