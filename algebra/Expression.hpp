@@ -89,6 +89,9 @@ class ConstExpression : public Expression {
    /// Constructor for NULL values
    ConstExpression(std::nullptr_t, Type type) : Expression(type), null(true) {}
 
+   /// Get the raw value
+   const std::string& getValue() const { return value; }
+
    /// Generate SQL
    void generate(CppWriter& out) override;
    /// Generate SQL in a form that is suitable as operand

@@ -20,7 +20,7 @@ std::map<std::string, std::map<std::string, std::function<void(Database*, size_t
 			Varchar<25> v_16 = value.l_shipinstruct;
 			Varchar<10> v_17 = value.l_shipmode;
 			Varchar<44> v_18 = value.l_comment;
-			if (v_13 <= ((Timestamp)Varchar<10>("1998-09-01"))) {
+			if (v_13 <= (2451058)) {
 				auto it = v_2.find({v_11, v_12});
 				if (it == v_2.end()) {
 					v_2.insert({{v_11, v_12}, {v_7, v_8, v_8 * (1 - v_9), (v_8 * (1 - v_9)) * (1 + v_10), {v_7, 1}, {v_8, 1}, {v_9, 1}, 1}});
@@ -89,7 +89,7 @@ std::map<std::string, std::map<std::string, std::function<void(Database*, size_t
 			Varchar<25> v_16 = value.l_shipinstruct;
 			Varchar<10> v_17 = value.l_shipmode;
 			Varchar<44> v_18 = value.l_comment;
-			if (v_13 <= ((Timestamp)Varchar<10>("1998-09-01"))) {
+			if (v_13 <= (2451058)) {
 				auto it = v_2.find({v_11, v_12});
 				if (it == v_2.end()) {
 					v_2.insert({{v_11, v_12}, {v_7, v_8, v_8 * (1 - v_9), (v_8 * (1 - v_9)) * (1 + v_10), {v_7, 1}, {v_8, 1}, {v_9, 1}, 1}});
@@ -158,7 +158,7 @@ std::map<std::string, std::map<std::string, std::function<void(Database*, size_t
 			Varchar<25> v_16 = value.l_shipinstruct;
 			Varchar<10> v_17 = value.l_shipmode;
 			Varchar<44> v_18 = value.l_comment;
-			if (v_13 <= ((Timestamp)Varchar<10>("1998-09-01"))) {
+			if (v_13 <= (2451058)) {
 				auto it = v_2.find({v_11, v_12});
 				if (it == v_2.end()) {
 					v_2.insert({{v_11, v_12}, {v_7, v_8, v_8 * (1 - v_9), (v_8 * (1 - v_9)) * (1 + v_10), {v_7, 1}, {v_8, 1}, {v_9, 1}, 1}});
@@ -227,7 +227,7 @@ std::map<std::string, std::map<std::string, std::function<void(Database*, size_t
 			Varchar<25> v_16 = value.l_shipinstruct;
 			Varchar<10> v_17 = value.l_shipmode;
 			Varchar<44> v_18 = value.l_comment;
-			if (v_13 <= ((Timestamp)Varchar<10>("1998-09-01"))) {
+			if (v_13 <= (2451058)) {
 				auto it = v_2.find({v_11, v_12});
 				if (it == v_2.end()) {
 					v_2.insert({{v_11, v_12}, {v_7, v_8, v_8 * (1 - v_9), (v_8 * (1 - v_9)) * (1 + v_10), {v_7, 1}, {v_8, 1}, {v_9, 1}, 1}});
@@ -296,7 +296,7 @@ std::map<std::string, std::map<std::string, std::function<void(Database*, size_t
 			Varchar<25> v_16 = value.l_shipinstruct;
 			Varchar<10> v_17 = value.l_shipmode;
 			Varchar<44> v_18 = value.l_comment;
-			if (v_13 <= ((Timestamp)Varchar<10>("1998-09-01"))) {
+			if (v_13 <= (2451058)) {
 				auto it = v_2.find({v_11, v_12});
 				if (it == v_2.end()) {
 					v_2.insert({{v_11, v_12}, {v_7, v_8, v_8 * (1 - v_9), (v_8 * (1 - v_9)) * (1 + v_10), {v_7, 1}, {v_8, 1}, {v_9, 1}, 1}});

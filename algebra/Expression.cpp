@@ -2,6 +2,7 @@
 #include "algebra/Operator.hpp"
 #include "sql/SQLWriter.hpp"
 #include "adapter/CppWriter.hpp"
+#include "adapter/TimeUtil.hpp"
 #include <algorithm>
 #include <utility>
 //---------------------------------------------------------------------------
@@ -54,10 +55,17 @@ void ConstExpression::generate(CppWriter& out)
 void CastExpression::generate(CppWriter& out)
 // Generate SQL
 {
-   out.write("(");
-   out.writeType(getType());
-   out.write(")");
-   input->generate(out);
+   ConstExpression* exp = dynamic_cast<ConstExpression*>(input.get());
+
+   if (getType().getType() == Type::Date && exp) {
+      std::string value = exp->getValue();
+      out.write(std::to_string(tutil::parseDate(value)));
+   } else {
+      out.write("(");
+      out.writeType(getType());
+      out.write(")");
+      input->generate(out);
+   }
 }
 //---------------------------------------------------------------------------
 ComparisonExpression::ComparisonExpression(unique_ptr<Expression> left, unique_ptr<Expression> right, Mode mode, Collate collate)

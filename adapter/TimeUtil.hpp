@@ -6,4 +6,6 @@ namespace tutil {
 
 int64_t getMillis();
 
+int64_t parseDate(const std::string& date);
+
 }
