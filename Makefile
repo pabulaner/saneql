@@ -7,7 +7,7 @@ qsrc:=adapter/StringUtil.cpp adapter/TimeUtil.cpp adapter/Database.cpp
 gensrc:=$(PREFIX)parser/saneql_parser.cpp
 obj:=$(addprefix $(PREFIX),$(src:.cpp=.o)) $(gensrc:.cpp=.o)
 
-CXXFLAGS:=-std=c++23 -I$(PREFIX) -I. -g -Wall -Wextra -mavx2 -w
+CXXFLAGS:=-std=c++23 -I$(PREFIX) -I. -g -Wall -Wextra -mavx2 -w -O3
 
 -include $(addprefix $(PREFIX),$(src:.cpp=.d)) $(gensrc:.cpp=.d)
 

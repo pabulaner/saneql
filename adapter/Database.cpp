@@ -63,7 +63,6 @@ Database::Database(u32 threadCount, u32 warehouseCount, const std::string& tpchP
     });
 
     std::cout << "Finished loading TPCC!" << std::endl;
-    return;
     std::cout << "Loading TPCH..." << std::endl;
 
     auto fullPath = [&](const std::string& table) {
