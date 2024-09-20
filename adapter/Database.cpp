@@ -7,6 +7,7 @@
 #include <algorithm>
 
 #include "StringUtil.hpp"
+#include "TimeUtil.hpp"
 #include "PerfEvent.hpp"
 #include "vmcache/tpch/data/csv.hpp"
 #include "vmcache/tpch/data/table-reader.hpp"
@@ -335,14 +336,17 @@ int main(int argc, char** argv) {
                     if (allOpts || queriesByOpt.first == opt) {
                         for (auto& queriesByName : queriesByOpt.second) {
                             if (allNames || queriesByName.first == name) {
-                                e.startCounters();
                                 for (size_t i = 0; i < repeatValue; i++) {
+                                    e.startCounters();
+                                    int64_t begin = tutil::getMillis();
                                     queriesByName.second(db, limitValue);
-                                }
-                                e.stopCounters();
+                                    int64_t end = tutil::getMillis();
+                                    e.stopCounters();
 
-                                std::cout << queriesByOpt.first << ":" << queriesByName.first << ":" << std::endl;
-                                e.printReport(std::cout, repeatValue);
+                                    std::cout << queriesByOpt.first << ":" << queriesByName.first << ": " << (end - begin) << "ms" << std::endl;
+
+                                    e.printReport(std::cout, repeatValue);
+                                }
                             }
                         }
                     }
