@@ -2,7 +2,7 @@ std::map<std::string, std::map<std::string, std::function<void(Database*, size_t
 	{"none", {
 	{"./query/query.sane", [](Database* db, size_t limit) {
 		std::vector<std::tuple<Varchar<1>, Varchar<1>, Numeric, Numeric, Numeric, Numeric, Numeric, Numeric, Numeric, Integer, Varchar<1>, Varchar<1>>> v_1;
-		std::map<std::tuple<Varchar<1>, Varchar<1>>, std::tuple<Numeric, Numeric, Numeric, Numeric, std::pair<Numeric, Integer>, std::pair<Numeric, Integer>, std::pair<Numeric, Integer>, Integer>> v_2;
+		std::unordered_map<std::tuple<Varchar<1>, Varchar<1>>, std::tuple<Numeric, Numeric, Numeric, Numeric, std::pair<Numeric, Integer>, std::pair<Numeric, Integer>, std::pair<Numeric, Integer>, Integer>> v_2;
 		db->lineitem_tpch.forEach([&](auto& key, auto& value) {
 			Integer v_3 = key.l_orderkey;
 			Integer v_4 = value.l_partkey;
@@ -71,7 +71,7 @@ std::map<std::string, std::map<std::string, std::function<void(Database*, size_t
 	{"selects", {
 	{"./query/query.sane", [](Database* db, size_t limit) {
 		std::vector<std::tuple<Varchar<1>, Varchar<1>, Numeric, Numeric, Numeric, Numeric, Numeric, Numeric, Numeric, Integer, Varchar<1>, Varchar<1>>> v_1;
-		std::map<std::tuple<Varchar<1>, Varchar<1>>, std::tuple<Numeric, Numeric, Numeric, Numeric, std::pair<Numeric, Integer>, std::pair<Numeric, Integer>, std::pair<Numeric, Integer>, Integer>> v_2;
+		std::unordered_map<std::tuple<Varchar<1>, Varchar<1>>, std::tuple<Numeric, Numeric, Numeric, Numeric, std::pair<Numeric, Integer>, std::pair<Numeric, Integer>, std::pair<Numeric, Integer>, Integer>> v_2;
 		db->lineitem_tpch.forEach([&](auto& key, auto& value) {
 			Integer v_3 = key.l_orderkey;
 			Integer v_4 = value.l_partkey;
@@ -140,7 +140,7 @@ std::map<std::string, std::map<std::string, std::function<void(Database*, size_t
 	{"scans", {
 	{"./query/query.sane", [](Database* db, size_t limit) {
 		std::vector<std::tuple<Varchar<1>, Varchar<1>, Numeric, Numeric, Numeric, Numeric, Numeric, Numeric, Numeric, Integer, Varchar<1>, Varchar<1>>> v_1;
-		std::map<std::tuple<Varchar<1>, Varchar<1>>, std::tuple<Numeric, Numeric, Numeric, Numeric, std::pair<Numeric, Integer>, std::pair<Numeric, Integer>, std::pair<Numeric, Integer>, Integer>> v_2;
+		std::unordered_map<std::tuple<Varchar<1>, Varchar<1>>, std::tuple<Numeric, Numeric, Numeric, Numeric, std::pair<Numeric, Integer>, std::pair<Numeric, Integer>, std::pair<Numeric, Integer>, Integer>> v_2;
 		db->lineitem_tpch.forEach([&](auto& key, auto& value) {
 			Integer v_3 = key.l_orderkey;
 			Integer v_4 = value.l_partkey;
@@ -209,7 +209,7 @@ std::map<std::string, std::map<std::string, std::function<void(Database*, size_t
 	{"joins", {
 	{"./query/query.sane", [](Database* db, size_t limit) {
 		std::vector<std::tuple<Varchar<1>, Varchar<1>, Numeric, Numeric, Numeric, Numeric, Numeric, Numeric, Numeric, Integer, Varchar<1>, Varchar<1>>> v_1;
-		std::map<std::tuple<Varchar<1>, Varchar<1>>, std::tuple<Numeric, Numeric, Numeric, Numeric, std::pair<Numeric, Integer>, std::pair<Numeric, Integer>, std::pair<Numeric, Integer>, Integer>> v_2;
+		std::unordered_map<std::tuple<Varchar<1>, Varchar<1>>, std::tuple<Numeric, Numeric, Numeric, Numeric, std::pair<Numeric, Integer>, std::pair<Numeric, Integer>, std::pair<Numeric, Integer>, Integer>> v_2;
 		db->lineitem_tpch.forEach([&](auto& key, auto& value) {
 			Integer v_3 = key.l_orderkey;
 			Integer v_4 = value.l_partkey;
@@ -278,7 +278,7 @@ std::map<std::string, std::map<std::string, std::function<void(Database*, size_t
 	{"all", {
 	{"./query/query.sane", [](Database* db, size_t limit) {
 		std::vector<std::tuple<Varchar<1>, Varchar<1>, Numeric, Numeric, Numeric, Numeric, Numeric, Numeric, Numeric, Integer, Varchar<1>, Varchar<1>>> v_1;
-		std::map<std::tuple<Varchar<1>, Varchar<1>>, std::tuple<Numeric, Numeric, Numeric, Numeric, std::pair<Numeric, Integer>, std::pair<Numeric, Integer>, std::pair<Numeric, Integer>, Integer>> v_2;
+		std::unordered_map<std::tuple<Varchar<1>, Varchar<1>>, std::tuple<Numeric, Numeric, Numeric, Numeric, std::pair<Numeric, Integer>, std::pair<Numeric, Integer>, std::pair<Numeric, Integer>, Integer>> v_2;
 		db->lineitem_tpch.forEach([&](auto& key, auto& value) {
 			Integer v_3 = key.l_orderkey;
 			Integer v_4 = value.l_partkey;

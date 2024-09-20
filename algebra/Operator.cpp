@@ -138,7 +138,7 @@ void Join::generate(CppWriter& out, std::function<void()> consume)
 
    const IU mapIU{Type::getUnknown()};
 
-   out.write("std::multimap<std::tuple<");
+   out.write("std::unordered_multimap<std::tuple<");
    out.writeTypes(vutil::map<Type>(leftKeyIUs, [](const IU* iu) { return iu->getType(); }));
    out.write(">, std::tuple<");
    out.writeTypes(vutil::map<Type>(leftPayloadIUs, [](const IU* iu) { return iu->getType(); }));
@@ -204,7 +204,7 @@ void GroupBy::generate(CppWriter& out, std::function<void()> consume)
 
    const IU mapIU{Type::getUnknown()};
 
-   out.write("std::map<std::tuple<");
+   out.write("std::unordered_map<std::tuple<");
    out.writeTypes(vutil::map<Type>(groupBy, [](const Entry& e) { return e.iu->getType(); }));
    out.write(">, std::tuple<");
 

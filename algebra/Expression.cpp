@@ -5,6 +5,7 @@
 #include "adapter/TimeUtil.hpp"
 #include <algorithm>
 #include <utility>
+#include <iostream>
 //---------------------------------------------------------------------------
 // (c) 2023 Thomas Neumann
 //---------------------------------------------------------------------------
