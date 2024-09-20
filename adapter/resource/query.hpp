@@ -20,18 +20,20 @@ std::map<std::string, std::map<std::string, std::function<void(Database*, size_t
 			Varchar<25> v_16 = value.l_shipinstruct;
 			Varchar<10> v_17 = value.l_shipmode;
 			Varchar<44> v_18 = value.l_comment;
-			auto it = v_2.find({v_11, v_12});
-			if (it == v_2.end()) {
-				v_2.insert({{v_11, v_12}, {v_7, v_8, v_8 * (1 - v_9), (v_8 * (1 - v_9)) * (1 + v_10), {v_7, 1}, {v_8, 1}, {v_9, 1}, 1}});
-			} else {
-				std::get<0>(it->second) += v_7;
-				std::get<1>(it->second) += v_8;
-				std::get<2>(it->second) += v_8 * (1 - v_9);
-				std::get<3>(it->second) += (v_8 * (1 - v_9)) * (1 + v_10);
-				std::get<4>(it->second) = {std::get<4>(it->second).first + v_7, std::get<4>(it->second).second + 1};
-				std::get<5>(it->second) = {std::get<5>(it->second).first + v_8, std::get<5>(it->second).second + 1};
-				std::get<6>(it->second) = {std::get<6>(it->second).first + v_9, std::get<6>(it->second).second + 1};
-				std::get<7>(it->second) += 1;
+			if (v_13 <= ((Timestamp)Varchar<10>("1998-09-01"))) {
+				auto it = v_2.find({v_11, v_12});
+				if (it == v_2.end()) {
+					v_2.insert({{v_11, v_12}, {v_7, v_8, v_8 * (1 - v_9), (v_8 * (1 - v_9)) * (1 + v_10), {v_7, 1}, {v_8, 1}, {v_9, 1}, 1}});
+				} else {
+					std::get<0>(it->second) += v_7;
+					std::get<1>(it->second) += v_8;
+					std::get<2>(it->second) += v_8 * (1 - v_9);
+					std::get<3>(it->second) += (v_8 * (1 - v_9)) * (1 + v_10);
+					std::get<4>(it->second) = {std::get<4>(it->second).first + v_7, std::get<4>(it->second).second + 1};
+					std::get<5>(it->second) = {std::get<5>(it->second).first + v_8, std::get<5>(it->second).second + 1};
+					std::get<6>(it->second) = {std::get<6>(it->second).first + v_9, std::get<6>(it->second).second + 1};
+					std::get<7>(it->second) += 1;
+				}
 			}
 		});
 		for (auto& it : v_2) {
@@ -87,18 +89,20 @@ std::map<std::string, std::map<std::string, std::function<void(Database*, size_t
 			Varchar<25> v_16 = value.l_shipinstruct;
 			Varchar<10> v_17 = value.l_shipmode;
 			Varchar<44> v_18 = value.l_comment;
-			auto it = v_2.find({v_11, v_12});
-			if (it == v_2.end()) {
-				v_2.insert({{v_11, v_12}, {v_7, v_8, v_8 * (1 - v_9), (v_8 * (1 - v_9)) * (1 + v_10), {v_7, 1}, {v_8, 1}, {v_9, 1}, 1}});
-			} else {
-				std::get<0>(it->second) += v_7;
-				std::get<1>(it->second) += v_8;
-				std::get<2>(it->second) += v_8 * (1 - v_9);
-				std::get<3>(it->second) += (v_8 * (1 - v_9)) * (1 + v_10);
-				std::get<4>(it->second) = {std::get<4>(it->second).first + v_7, std::get<4>(it->second).second + 1};
-				std::get<5>(it->second) = {std::get<5>(it->second).first + v_8, std::get<5>(it->second).second + 1};
-				std::get<6>(it->second) = {std::get<6>(it->second).first + v_9, std::get<6>(it->second).second + 1};
-				std::get<7>(it->second) += 1;
+			if (v_13 <= ((Timestamp)Varchar<10>("1998-09-01"))) {
+				auto it = v_2.find({v_11, v_12});
+				if (it == v_2.end()) {
+					v_2.insert({{v_11, v_12}, {v_7, v_8, v_8 * (1 - v_9), (v_8 * (1 - v_9)) * (1 + v_10), {v_7, 1}, {v_8, 1}, {v_9, 1}, 1}});
+				} else {
+					std::get<0>(it->second) += v_7;
+					std::get<1>(it->second) += v_8;
+					std::get<2>(it->second) += v_8 * (1 - v_9);
+					std::get<3>(it->second) += (v_8 * (1 - v_9)) * (1 + v_10);
+					std::get<4>(it->second) = {std::get<4>(it->second).first + v_7, std::get<4>(it->second).second + 1};
+					std::get<5>(it->second) = {std::get<5>(it->second).first + v_8, std::get<5>(it->second).second + 1};
+					std::get<6>(it->second) = {std::get<6>(it->second).first + v_9, std::get<6>(it->second).second + 1};
+					std::get<7>(it->second) += 1;
+				}
 			}
 		});
 		for (auto& it : v_2) {
@@ -154,18 +158,20 @@ std::map<std::string, std::map<std::string, std::function<void(Database*, size_t
 			Varchar<25> v_16 = value.l_shipinstruct;
 			Varchar<10> v_17 = value.l_shipmode;
 			Varchar<44> v_18 = value.l_comment;
-			auto it = v_2.find({v_11, v_12});
-			if (it == v_2.end()) {
-				v_2.insert({{v_11, v_12}, {v_7, v_8, v_8 * (1 - v_9), (v_8 * (1 - v_9)) * (1 + v_10), {v_7, 1}, {v_8, 1}, {v_9, 1}, 1}});
-			} else {
-				std::get<0>(it->second) += v_7;
-				std::get<1>(it->second) += v_8;
-				std::get<2>(it->second) += v_8 * (1 - v_9);
-				std::get<3>(it->second) += (v_8 * (1 - v_9)) * (1 + v_10);
-				std::get<4>(it->second) = {std::get<4>(it->second).first + v_7, std::get<4>(it->second).second + 1};
-				std::get<5>(it->second) = {std::get<5>(it->second).first + v_8, std::get<5>(it->second).second + 1};
-				std::get<6>(it->second) = {std::get<6>(it->second).first + v_9, std::get<6>(it->second).second + 1};
-				std::get<7>(it->second) += 1;
+			if (v_13 <= ((Timestamp)Varchar<10>("1998-09-01"))) {
+				auto it = v_2.find({v_11, v_12});
+				if (it == v_2.end()) {
+					v_2.insert({{v_11, v_12}, {v_7, v_8, v_8 * (1 - v_9), (v_8 * (1 - v_9)) * (1 + v_10), {v_7, 1}, {v_8, 1}, {v_9, 1}, 1}});
+				} else {
+					std::get<0>(it->second) += v_7;
+					std::get<1>(it->second) += v_8;
+					std::get<2>(it->second) += v_8 * (1 - v_9);
+					std::get<3>(it->second) += (v_8 * (1 - v_9)) * (1 + v_10);
+					std::get<4>(it->second) = {std::get<4>(it->second).first + v_7, std::get<4>(it->second).second + 1};
+					std::get<5>(it->second) = {std::get<5>(it->second).first + v_8, std::get<5>(it->second).second + 1};
+					std::get<6>(it->second) = {std::get<6>(it->second).first + v_9, std::get<6>(it->second).second + 1};
+					std::get<7>(it->second) += 1;
+				}
 			}
 		});
 		for (auto& it : v_2) {
@@ -221,18 +227,20 @@ std::map<std::string, std::map<std::string, std::function<void(Database*, size_t
 			Varchar<25> v_16 = value.l_shipinstruct;
 			Varchar<10> v_17 = value.l_shipmode;
 			Varchar<44> v_18 = value.l_comment;
-			auto it = v_2.find({v_11, v_12});
-			if (it == v_2.end()) {
-				v_2.insert({{v_11, v_12}, {v_7, v_8, v_8 * (1 - v_9), (v_8 * (1 - v_9)) * (1 + v_10), {v_7, 1}, {v_8, 1}, {v_9, 1}, 1}});
-			} else {
-				std::get<0>(it->second) += v_7;
-				std::get<1>(it->second) += v_8;
-				std::get<2>(it->second) += v_8 * (1 - v_9);
-				std::get<3>(it->second) += (v_8 * (1 - v_9)) * (1 + v_10);
-				std::get<4>(it->second) = {std::get<4>(it->second).first + v_7, std::get<4>(it->second).second + 1};
-				std::get<5>(it->second) = {std::get<5>(it->second).first + v_8, std::get<5>(it->second).second + 1};
-				std::get<6>(it->second) = {std::get<6>(it->second).first + v_9, std::get<6>(it->second).second + 1};
-				std::get<7>(it->second) += 1;
+			if (v_13 <= ((Timestamp)Varchar<10>("1998-09-01"))) {
+				auto it = v_2.find({v_11, v_12});
+				if (it == v_2.end()) {
+					v_2.insert({{v_11, v_12}, {v_7, v_8, v_8 * (1 - v_9), (v_8 * (1 - v_9)) * (1 + v_10), {v_7, 1}, {v_8, 1}, {v_9, 1}, 1}});
+				} else {
+					std::get<0>(it->second) += v_7;
+					std::get<1>(it->second) += v_8;
+					std::get<2>(it->second) += v_8 * (1 - v_9);
+					std::get<3>(it->second) += (v_8 * (1 - v_9)) * (1 + v_10);
+					std::get<4>(it->second) = {std::get<4>(it->second).first + v_7, std::get<4>(it->second).second + 1};
+					std::get<5>(it->second) = {std::get<5>(it->second).first + v_8, std::get<5>(it->second).second + 1};
+					std::get<6>(it->second) = {std::get<6>(it->second).first + v_9, std::get<6>(it->second).second + 1};
+					std::get<7>(it->second) += 1;
+				}
 			}
 		});
 		for (auto& it : v_2) {
@@ -288,18 +296,20 @@ std::map<std::string, std::map<std::string, std::function<void(Database*, size_t
 			Varchar<25> v_16 = value.l_shipinstruct;
 			Varchar<10> v_17 = value.l_shipmode;
 			Varchar<44> v_18 = value.l_comment;
-			auto it = v_2.find({v_11, v_12});
-			if (it == v_2.end()) {
-				v_2.insert({{v_11, v_12}, {v_7, v_8, v_8 * (1 - v_9), (v_8 * (1 - v_9)) * (1 + v_10), {v_7, 1}, {v_8, 1}, {v_9, 1}, 1}});
-			} else {
-				std::get<0>(it->second) += v_7;
-				std::get<1>(it->second) += v_8;
-				std::get<2>(it->second) += v_8 * (1 - v_9);
-				std::get<3>(it->second) += (v_8 * (1 - v_9)) * (1 + v_10);
-				std::get<4>(it->second) = {std::get<4>(it->second).first + v_7, std::get<4>(it->second).second + 1};
-				std::get<5>(it->second) = {std::get<5>(it->second).first + v_8, std::get<5>(it->second).second + 1};
-				std::get<6>(it->second) = {std::get<6>(it->second).first + v_9, std::get<6>(it->second).second + 1};
-				std::get<7>(it->second) += 1;
+			if (v_13 <= ((Timestamp)Varchar<10>("1998-09-01"))) {
+				auto it = v_2.find({v_11, v_12});
+				if (it == v_2.end()) {
+					v_2.insert({{v_11, v_12}, {v_7, v_8, v_8 * (1 - v_9), (v_8 * (1 - v_9)) * (1 + v_10), {v_7, 1}, {v_8, 1}, {v_9, 1}, 1}});
+				} else {
+					std::get<0>(it->second) += v_7;
+					std::get<1>(it->second) += v_8;
+					std::get<2>(it->second) += v_8 * (1 - v_9);
+					std::get<3>(it->second) += (v_8 * (1 - v_9)) * (1 + v_10);
+					std::get<4>(it->second) = {std::get<4>(it->second).first + v_7, std::get<4>(it->second).second + 1};
+					std::get<5>(it->second) = {std::get<5>(it->second).first + v_8, std::get<5>(it->second).second + 1};
+					std::get<6>(it->second) = {std::get<6>(it->second).first + v_9, std::get<6>(it->second).second + 1};
+					std::get<7>(it->second) += 1;
+				}
 			}
 		});
 		for (auto& it : v_2) {

@@ -54,7 +54,7 @@ struct Varchar {
       memcpy(data, other.data, length);
    }
 
-   explicit operator Timestamp() const {
+   explicit constexpr operator Timestamp() const {
       if (length != sizeof("0000-00-00") - 1 || data[4] != '-' || data[7] != '-') {
          return 0;
       }
