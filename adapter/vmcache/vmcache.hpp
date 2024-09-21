@@ -1655,12 +1655,12 @@ struct vmcacheAdapter
       u8 k[Record::maxFoldLength()];
       u16 l = Record::foldKey(k, key);
       tree.scanAsc({k, l}, [&](BTreeNode& node, unsigned slot) {
-         memcpy(kk, node.getPrefix(), node.prefixLen);
-         memcpy(kk+node.prefixLen, node.getKey(slot), node.slot[slot].keyLen);
+         memcpy(k, node.getPrefix(), node.prefixLen);
+         memcpy(k+node.prefixLen, node.getKey(slot), node.slot[slot].keyLen);
          typename Record::Key typedKey;
-         Record::unfoldKey(kk, typedKey);
+         Record::unfoldKey(k, typedKey);
 
-         if (memcmp(&key, &typedKey)) {
+         if (memcmp(&key, &typedKey, sizeof(typename Record::Key))) {
             return false;
          }
 
