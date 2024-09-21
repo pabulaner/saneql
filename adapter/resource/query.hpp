@@ -49,7 +49,13 @@ std::map<std::string, std::map<std::string, std::function<void(Database*, size_t
 			Integer v_28 = std::get<7>(it.second);
 			v_1.push_back({v_19, v_20, v_21, v_22, v_23, v_24, v_25, v_26, v_27, v_28, v_19, v_20});
 		}
-		std::sort(v_1.begin(), v_1.end(), [](const auto& t1, const auto& t2) { return t1 < t2; });
+		std::sort(v_1.begin(), v_1.end(), [](const auto& t1, const auto& t2) {
+			if (get<0>(t1) < get<0>(t2)) return true;
+			if (get<0>(t2) < get<0>(t1)) return false;
+			if (get<1>(t1) < get<1>(t2)) return true;
+			if (get<1>(t2) < get<1>(t1)) return false;
+			return false;
+		});
 		for (auto& t : v_1) {
 			Numeric v_21 = std::get<2>(t);
 			Numeric v_22 = std::get<3>(t);
@@ -118,7 +124,13 @@ std::map<std::string, std::map<std::string, std::function<void(Database*, size_t
 			Integer v_28 = std::get<7>(it.second);
 			v_1.push_back({v_19, v_20, v_21, v_22, v_23, v_24, v_25, v_26, v_27, v_28, v_19, v_20});
 		}
-		std::sort(v_1.begin(), v_1.end(), [](const auto& t1, const auto& t2) { return t1 < t2; });
+		std::sort(v_1.begin(), v_1.end(), [](const auto& t1, const auto& t2) {
+			if (get<0>(t1) < get<0>(t2)) return true;
+			if (get<0>(t2) < get<0>(t1)) return false;
+			if (get<1>(t1) < get<1>(t2)) return true;
+			if (get<1>(t2) < get<1>(t1)) return false;
+			return false;
+		});
 		for (auto& t : v_1) {
 			Numeric v_21 = std::get<2>(t);
 			Numeric v_22 = std::get<3>(t);
@@ -187,7 +199,13 @@ std::map<std::string, std::map<std::string, std::function<void(Database*, size_t
 			Integer v_28 = std::get<7>(it.second);
 			v_1.push_back({v_19, v_20, v_21, v_22, v_23, v_24, v_25, v_26, v_27, v_28, v_19, v_20});
 		}
-		std::sort(v_1.begin(), v_1.end(), [](const auto& t1, const auto& t2) { return t1 < t2; });
+		std::sort(v_1.begin(), v_1.end(), [](const auto& t1, const auto& t2) {
+			if (get<0>(t1) < get<0>(t2)) return true;
+			if (get<0>(t2) < get<0>(t1)) return false;
+			if (get<1>(t1) < get<1>(t2)) return true;
+			if (get<1>(t2) < get<1>(t1)) return false;
+			return false;
+		});
 		for (auto& t : v_1) {
 			Numeric v_21 = std::get<2>(t);
 			Numeric v_22 = std::get<3>(t);
@@ -256,7 +274,13 @@ std::map<std::string, std::map<std::string, std::function<void(Database*, size_t
 			Integer v_28 = std::get<7>(it.second);
 			v_1.push_back({v_19, v_20, v_21, v_22, v_23, v_24, v_25, v_26, v_27, v_28, v_19, v_20});
 		}
-		std::sort(v_1.begin(), v_1.end(), [](const auto& t1, const auto& t2) { return t1 < t2; });
+		std::sort(v_1.begin(), v_1.end(), [](const auto& t1, const auto& t2) {
+			if (get<0>(t1) < get<0>(t2)) return true;
+			if (get<0>(t2) < get<0>(t1)) return false;
+			if (get<1>(t1) < get<1>(t2)) return true;
+			if (get<1>(t2) < get<1>(t1)) return false;
+			return false;
+		});
 		for (auto& t : v_1) {
 			Numeric v_21 = std::get<2>(t);
 			Numeric v_22 = std::get<3>(t);
@@ -325,7 +349,13 @@ std::map<std::string, std::map<std::string, std::function<void(Database*, size_t
 			Integer v_28 = std::get<7>(it.second);
 			v_1.push_back({v_19, v_20, v_21, v_22, v_23, v_24, v_25, v_26, v_27, v_28, v_19, v_20});
 		}
-		std::sort(v_1.begin(), v_1.end(), [](const auto& t1, const auto& t2) { return t1 < t2; });
+		std::sort(v_1.begin(), v_1.end(), [](const auto& t1, const auto& t2) {
+			if (get<0>(t1) < get<0>(t2)) return true;
+			if (get<0>(t2) < get<0>(t1)) return false;
+			if (get<1>(t1) < get<1>(t2)) return true;
+			if (get<1>(t2) < get<1>(t1)) return false;
+			return false;
+		});
 		for (auto& t : v_1) {
 			Numeric v_21 = std::get<2>(t);
 			Numeric v_22 = std::get<3>(t);

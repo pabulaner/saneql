@@ -41,7 +41,7 @@ void TableScan::generate(CppWriter& out, std::function<void()> consume)
 
    for (auto& c : columns) {
       out.writeType(c.iu->getType());
-      out.write(" ");
+      out.write("& ");
       out.writeIU(c.iu.get());
       out.write(" = ");
       out.write(c.isKey ? "key" : "value");
@@ -164,14 +164,14 @@ void Join::generate(CppWriter& out, std::function<void()> consume)
       for (size_t i = 0; i < leftKeyIUs.size(); i++) {
          auto iu = leftKeyIUs[i];
          out.writeType(iu->getType());
-         out.write(" ");
+         out.write("& ");
          out.writeIU(iu);
          out.writeln(" = std::get<" + std::to_string(i) + ">(range.first->first);");
       }
       for (size_t i = 0; i < leftPayloadIUs.size(); i++) {
          auto iu = leftPayloadIUs[i];
          out.writeType(iu->getType());
-         out.write(" ");
+         out.write("& ");
          out.writeIU(iu);
          out.writeln(" = std::get<" + std::to_string(i) + ">(range.first->second);");
       }
@@ -291,7 +291,7 @@ void GroupBy::generate(CppWriter& out, std::function<void()> consume)
    for (size_t i = 0; i < groupBy.size(); i++) {
          auto iu = groupBy[i].iu.get();
          out.writeType(iu->getType());
-         out.write(" ");
+         out.write("& ");
          out.writeIU(iu);
          out.writeln(" = std::get<" + std::to_string(i) + ">(it.first);");
    }
@@ -299,7 +299,8 @@ void GroupBy::generate(CppWriter& out, std::function<void()> consume)
       Aggregation& a = aggregates[i];
 
       out.writeType(a.iu->getType());
-      out.write(" ");
+
+      out.write(a.op == Op::Avg ? " " : "& ");
       out.writeIU(a.iu.get());
       out.write(" = std::get<" + std::to_string(i) + ">(it.second)");
 
@@ -367,7 +368,16 @@ void Sort::generate(CppWriter& out, std::function<void()> consume)
    out.writeIU(&vecIU);
    out.write(".begin(), ");
    out.writeIU(&vecIU);
-   out.writeln(".end(), [](const auto& t1, const auto& t2) { return t1 < t2; });");
+   out.writeln(".end(), [](const auto& t1, const auto& t2) {");
+   
+   for (size_t i = 0; i < order.size(); i++) {
+      std::string istr = std::to_string(i);
+      out.writeln("if (get<" + istr + ">(t1) < get<" + istr + ">(t2)) return true;");
+      out.writeln("if (get<" + istr + ">(t2) < get<" + istr + ">(t1)) return false;");
+   }
+
+   out.writeln("return false;");
+   out.writeln("});");
 
    out.write("for (auto& t : ");
    out.writeIU(&vecIU);
@@ -376,7 +386,7 @@ void Sort::generate(CppWriter& out, std::function<void()> consume)
    for (size_t i = 0; i < ius.size(); i++) {
       auto iu = ius[i];
       out.writeType(iu->getType());
-      out.write(" ");
+      out.write("& ");
       out.writeIU(iu);
       out.writeln(" = std::get<" + std::to_string(order.size() + i) + ">(t);");
    }
