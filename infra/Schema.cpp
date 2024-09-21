@@ -62,7 +62,7 @@ void Schema::createTPCH()
       {"s_comment", Type::getVarchar(101), false}});
    createTable("partsupp_tpch", {
       {"ps_partkey", Type::getInteger(), true}, 
-      {"ps_suppkey", Type::getInteger(), false}, 
+      {"ps_suppkey", Type::getInteger(), true}, 
       {"ps_availqty", Type::getInteger(), false}, 
       {"ps_supplycost", Type::getDecimal(0, 0), false}, 
       {"ps_comment", Type::getVarchar(199), false}});
@@ -77,7 +77,7 @@ void Schema::createTPCH()
       {"c_comment", Type::getVarchar(117), false}});
    createTable("orders_tpch", {
       {"o_orderkey", Type::getInteger(), true}, 
-      {"o_custkey", Type::getInteger(), false}, 
+      {"o_custkey", Type::getInteger(), true}, 
       {"o_orderstatus", Type::getVarchar(1), false}, 
       {"o_totalprice", Type::getDecimal(0, 0), false}, 
       {"o_orderdate", Type::getDate(), false}, 
@@ -87,8 +87,8 @@ void Schema::createTPCH()
       {"o_comment", Type::getVarchar(79), false}});
    createTable("lineitem_tpch", {
       {"l_orderkey", Type::getInteger(), true}, 
-      {"l_partkey", Type::getInteger(), false}, 
-      {"l_suppkey", Type::getInteger(), false}, 
+      {"l_partkey", Type::getInteger(), true}, 
+      {"l_suppkey", Type::getInteger(), true}, 
       {"l_linenumber", Type::getInteger(), false}, 
       {"l_quantity", Type::getDecimal(0, 0), false}, 
       {"l_extendedprice", Type::getDecimal(0, 0), false}, 
