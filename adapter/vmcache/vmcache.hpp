@@ -1613,7 +1613,7 @@ struct vmcacheAdapter
          return true;
       });
    }
-
+   // -------------------------------------------------------------------------------------
    void scan(const typename Record::Key& key, const std::function<bool(const typename Record::Key&, const Record&)>& found_record_cb, std::function<void()> reset_if_scan_failed_cb) {
       u8 k[Record::maxFoldLength()];
       u16 l = Record::foldKey(k, key);
@@ -1650,24 +1650,6 @@ struct vmcacheAdapter
       u8 k[Record::maxFoldLength()];
       u16 l = Record::foldKey(k, key);
       tree.insert({k, l}, {(u8*)(&record), sizeof(Record)});
-   }
-   template<class Fn>
-   void lookup(const typename Record::Key& key, Fn fn) {
-      u8 k[Record::maxFoldLength()];
-      u16 l = Record::foldKey(k, key);
-      tree.scanAsc({k, l}, [&](BTreeNode& node, unsigned slot) {
-         memcpy(k, node.getPrefix(), node.prefixLen);
-         memcpy(k+node.prefixLen, node.getKey(slot), node.slot[slot].keyLen);
-         typename Record::Key typedKey;
-         Record::unfoldKey(k, typedKey);
-
-         if (memcmp(&key, &typedKey, sizeof(typename Record::Key))) {
-            return false;
-         }
-
-         consumer(*reinterpret_cast<const Record*>(node.getPayload(slot).data()));
-         return true;
-      });
    }
    // -------------------------------------------------------------------------------------
    template<class Fn>

@@ -135,8 +135,8 @@ Database::Database(u32 threadCount, u32 warehouseCount, const std::string& tpchP
         for (size_t i = 0; i < partsuppRows; i++) {
             partsupp_tpch.insert({
                 get<0>(partsupp.outputs).items[i],
-            }, {
                 get<1>(partsupp.outputs).items[i],
+            }, {
                 get<2>(partsupp.outputs).items[i],
                 get<3>(partsupp.outputs).items[i],
                 get<4>(partsupp.outputs).items[i],
@@ -166,8 +166,8 @@ Database::Database(u32 threadCount, u32 warehouseCount, const std::string& tpchP
         for (size_t i = 0; i < ordersRows; i++) {
             orders_tpch.insert({
                 (Integer) get<0>(orders.outputs).items[i],
+                (Integer) get<1>(orders.outputs).items[i],
             }, {
-                get<1>(orders.outputs).items[i],
                 get<2>(orders.outputs).items[i],
                 get<3>(orders.outputs).items[i],
                 get<4>(orders.outputs).items[i].value,
@@ -184,9 +184,9 @@ Database::Database(u32 threadCount, u32 warehouseCount, const std::string& tpchP
         for (size_t i = 0; i < lineitemRows; i++) {
             lineitem_tpch.insert({
                 (Integer) get<0>(lineitem.outputs).items[i],
+                (Integer) get<1>(lineitem.outputs).items[i],
+                (Integer) get<2>(lineitem.outputs).items[i],
             }, {
-                get<1>(lineitem.outputs).items[i],
-                get<2>(lineitem.outputs).items[i],
                 get<3>(lineitem.outputs).items[i],
                 get<4>(lineitem.outputs).items[i],
                 get<5>(lineitem.outputs).items[i],

@@ -126,9 +126,9 @@ struct partsupp_tpch_t {
    struct Key {
       static constexpr int id = 4;
       Integer ps_partkey;
+      Integer ps_suppkey;
    };
 
-   Integer ps_suppkey;
    Integer ps_availqty;
    Numeric ps_supplycost;
    Varchar<199> ps_comment;
@@ -138,6 +138,7 @@ struct partsupp_tpch_t {
    {
       unsigned pos = 0;
       pos += fold(out + pos, record.ps_partkey);
+      pos += fold(out + pos, record.ps_suppkey);
       return pos;
    }
    template <class T>
@@ -145,9 +146,10 @@ struct partsupp_tpch_t {
    {
       unsigned pos = 0;
       pos += unfold(in + pos, record.ps_partkey);
+      pos += unfold(in + pos, record.ps_suppkey);
       return pos;
    }
-   static constexpr unsigned maxFoldLength() { return 0 + sizeof(Key::ps_partkey); };
+   static constexpr unsigned maxFoldLength() { return 0 + sizeof(Key::ps_partkey) + sizeof(Key::ps_suppkey); };
 };
 
 struct customer_tpch_t {
@@ -187,9 +189,9 @@ struct orders_tpch_t {
    struct Key {
       static constexpr int id = 6;
       Integer o_orderkey;
+      Integer o_custkey;
    };
 
-   Integer o_custkey;
    Varchar<1> o_orderstatus;
    Numeric o_totalprice;
    Timestamp o_orderdate;
@@ -203,6 +205,7 @@ struct orders_tpch_t {
    {
       unsigned pos = 0;
       pos += fold(out + pos, record.o_orderkey);
+      pos += fold(out + pos, record.o_custkey);
       return pos;
    }
    template <class T>
@@ -210,9 +213,10 @@ struct orders_tpch_t {
    {
       unsigned pos = 0;
       pos += unfold(in + pos, record.o_orderkey);
+      pos += unfold(in + pos, record.o_custkey);
       return pos;
    }
-   static constexpr unsigned maxFoldLength() { return 0 + sizeof(Key::o_orderkey); };
+   static constexpr unsigned maxFoldLength() { return 0 + sizeof(Key::o_orderkey) + sizeof(Key::o_custkey); };
 };
 
 struct lineitem_tpch_t {
@@ -220,10 +224,10 @@ struct lineitem_tpch_t {
    struct Key {
       static constexpr int id = 7;
       Integer l_orderkey;
+      Integer l_partkey;
+      Integer l_suppkey;
    };
 
-   Integer l_partkey;
-   Integer l_suppkey;
    Integer l_linenumber;
    Numeric l_quantity;
    Numeric l_extendedprice;
@@ -243,6 +247,8 @@ struct lineitem_tpch_t {
    {
       unsigned pos = 0;
       pos += fold(out + pos, record.l_orderkey);
+      pos += fold(out + pos, record.l_partkey);
+      pos += fold(out + pos, record.l_suppkey);
       return pos;
    }
    template <class T>
@@ -250,7 +256,9 @@ struct lineitem_tpch_t {
    {
       unsigned pos = 0;
       pos += unfold(in + pos, record.l_orderkey);
+      pos += unfold(in + pos, record.l_partkey);
+      pos += unfold(in + pos, record.l_suppkey);
       return pos;
    }
-   static constexpr unsigned maxFoldLength() { return 0 + sizeof(Key::l_orderkey); };
+   static constexpr unsigned maxFoldLength() { return 0 + sizeof(Key::l_orderkey) + sizeof(Key::l_partkey) + sizeof(Key::l_suppkey); };
 };
