@@ -1601,7 +1601,8 @@ struct vmcacheAdapter
    BTree tree;
 
    public:
-   inline void forEach(const std::function<void(const typename Record::Key&, const Record&)>& consumer) {
+   template <typename Fn>
+   inline void forEach(Fn consumer) {
       u8 kk[Record::maxFoldLength()];
       tree.scanAsc({(u8*)nullptr, 0}, [&](BTreeNode& node, unsigned slot) {
          memcpy(kk, node.getPrefix(), node.prefixLen);
