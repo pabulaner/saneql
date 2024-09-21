@@ -1601,7 +1601,7 @@ struct vmcacheAdapter
    BTree tree;
 
    public:
-   void forEach(const std::function<void(const typename Record::Key&, const Record&)>& consumer) {
+   inline void forEach(const std::function<void(const typename Record::Key&, const Record&)>& consumer) {
       u8 kk[Record::maxFoldLength()];
       tree.scanAsc({(u8*)nullptr, 0}, [&](BTreeNode& node, unsigned slot) {
          memcpy(kk, node.getPrefix(), node.prefixLen);
@@ -1649,6 +1649,24 @@ struct vmcacheAdapter
       u8 k[Record::maxFoldLength()];
       u16 l = Record::foldKey(k, key);
       tree.insert({k, l}, {(u8*)(&record), sizeof(Record)});
+   }
+   template<class Fn>
+   void lookup(const typename Record::Key& key, Fn fn) {
+      u8 k[Record::maxFoldLength()];
+      u16 l = Record::foldKey(k, key);
+      tree.scanAsc({k, l}, [&](BTreeNode& node, unsigned slot) {
+         memcpy(kk, node.getPrefix(), node.prefixLen);
+         memcpy(kk+node.prefixLen, node.getKey(slot), node.slot[slot].keyLen);
+         typename Record::Key typedKey;
+         Record::unfoldKey(kk, typedKey);
+
+         if (memcmp(&key, &typedKey)) {
+            return false;
+         }
+
+         consumer(*reinterpret_cast<const Record*>(node.getPayload(slot).data()));
+         return true;
+      });
    }
    // -------------------------------------------------------------------------------------
    template<class Fn>

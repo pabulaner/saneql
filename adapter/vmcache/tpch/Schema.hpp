@@ -39,7 +39,7 @@ struct region_tpch_t {
    static constexpr int id = 1;
    struct Key {
       static constexpr int id = 1;
-      Integer r_region;
+      Integer r_regionkey;
    };
 
    Varchar<25> r_name;
@@ -49,17 +49,17 @@ struct region_tpch_t {
    static unsigned foldKey(uint8_t* out, const T& record)
    {
       unsigned pos = 0;
-      pos += fold(out + pos, record.r_region);
+      pos += fold(out + pos, record.r_regionkey);
       return pos;
    }
    template <class T>
    static unsigned unfoldKey(const uint8_t* in, T& record)
    {
       unsigned pos = 0;
-      pos += unfold(in + pos, record.r_region);
+      pos += unfold(in + pos, record.r_regionkey);
       return pos;
    }
-   static constexpr unsigned maxFoldLength() { return 0 + sizeof(Key::r_region); };
+   static constexpr unsigned maxFoldLength() { return 0 + sizeof(Key::r_regionkey); };
 };
 
 struct nation_tpch_t {
