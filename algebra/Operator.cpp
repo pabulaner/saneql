@@ -40,6 +40,7 @@ void TableScan::generate(CppWriter& out, std::function<void()> consume)
    out.writeln("db->" + name + ".forEach([&](auto& key, auto& value) {");
 
    for (auto& c : columns) {
+      out.write("const ");
       out.writeType(c.iu->getType());
       out.write("& ");
       out.writeIU(c.iu.get());
@@ -163,6 +164,7 @@ void Join::generate(CppWriter& out, std::function<void()> consume)
 
       for (size_t i = 0; i < leftKeyIUs.size(); i++) {
          auto iu = leftKeyIUs[i];
+         out.write("const ");
          out.writeType(iu->getType());
          out.write("& ");
          out.writeIU(iu);
@@ -170,6 +172,7 @@ void Join::generate(CppWriter& out, std::function<void()> consume)
       }
       for (size_t i = 0; i < leftPayloadIUs.size(); i++) {
          auto iu = leftPayloadIUs[i];
+         out.write("const ");
          out.writeType(iu->getType());
          out.write("& ");
          out.writeIU(iu);
@@ -290,6 +293,7 @@ void GroupBy::generate(CppWriter& out, std::function<void()> consume)
    out.writeln(") {");
    for (size_t i = 0; i < groupBy.size(); i++) {
          auto iu = groupBy[i].iu.get();
+         out.write("const ");
          out.writeType(iu->getType());
          out.write("& ");
          out.writeIU(iu);
@@ -298,8 +302,8 @@ void GroupBy::generate(CppWriter& out, std::function<void()> consume)
    for (size_t i = 0; i < aggregates.size(); i++) {
       Aggregation& a = aggregates[i];
 
+      out.write("const ");
       out.writeType(a.iu->getType());
-
       out.write(a.op == Op::Avg ? " " : "& ");
       out.writeIU(a.iu.get());
       out.write(" = std::get<" + std::to_string(i) + ">(it.second)");
@@ -385,6 +389,7 @@ void Sort::generate(CppWriter& out, std::function<void()> consume)
    
    for (size_t i = 0; i < ius.size(); i++) {
       auto iu = ius[i];
+      out.write("const ");
       out.writeType(iu->getType());
       out.write("& ");
       out.writeIU(iu);
