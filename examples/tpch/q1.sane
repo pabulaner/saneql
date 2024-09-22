@@ -1,4 +1,4 @@
-lineitem
+lineitem_tpch
 .filter(l_shipdate <= '1998-09-01'::date)
 .groupby({l_returnflag, l_linestatus},
    {sum_qty:=sum(l_quantity),
