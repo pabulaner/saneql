@@ -1,16 +1,28 @@
+#pragma once
+
 #include <vector>
 
+namespace saneql {
+class Type;
+namespace algebra {
+class IU;
+}
+}
 namespace adapter {
 
-class IU;
+using namespace saneql;
+using namespace saneql::algebra;
 
 class IUSet {
     // The iu type
-    typedef const IU* IUType
+    typedef const IU* IUType;
     // The ius
     std::vector<IUType> ius;
 
+public:
     IUSet();
+
+    IUSet(std::initializer_list<IUType> ius);
 
     IUSet(const std::vector<IUType>& ius);
 
@@ -27,13 +39,15 @@ class IUSet {
 
     void add(const IU* iu) { ius.push_back(iu); }
 
-    size_t size() { return ius.size(); }
+    size_t size() const { return ius.size(); }
 
     const std::vector<IUType>& data() const { return ius; }
 
-    IUType begin() const { return ius.begin(); }
+    std::vector<Type> getTypes() const;
 
-    IUType end() const { return ius.end(); }
+    auto begin() const { return ius.begin(); }
+
+    auto end() const { return ius.end(); }
 };
 
 }

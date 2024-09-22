@@ -1,10 +1,15 @@
 #include "IUSet.hpp"
 
-#include "VectorUtils.hpp"
+#include "VectorUtil.hpp"
+#include "algebra/Operator.hpp"
 
 namespace adapter {
 
 IUSet::IUSet() {}
+
+IUSet::IUSet(std::initializer_list<IUType> ius) 
+    : ius(ius) 
+{}
 
 IUSet::IUSet(const std::vector<IUType>& ius) 
     : ius(ius) 
@@ -17,7 +22,7 @@ IUSet::IUSet(const std::vector<T>& container) {
     }
 }
 
-IUType IUSet::operator[](size_t index) const {
+IUSet::IUType IUSet::operator[](size_t index) const {
     return ius[index];
 }
 
@@ -26,7 +31,7 @@ IUSet IUSet::operator|(const IUSet& other) const {
 
     for (IUType value : other.ius) {
         if (!result.contains(value)) {
-            result.push_back(value);
+            result.add(value);
         }
     }
 
@@ -38,7 +43,7 @@ IUSet IUSet::operator&(const IUSet& other) const {
 
     for (IUType value : ius) {
         if (other.contains(value)) {
-            result.push_back(value);
+            result.add(value);
         }
     }
 
@@ -47,6 +52,10 @@ IUSet IUSet::operator&(const IUSet& other) const {
 
 bool IUSet::contains(IUType iu) const {
     return vutil::contains(ius, iu);
+}
+
+std::vector<Type> IUSet::getTypes() const { 
+    return vutil::map<Type>(ius, [](IUType iu) { return iu->getType(); }); 
 }
 
 }

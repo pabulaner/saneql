@@ -129,7 +129,7 @@ class Map : public Operator {
    Map(std::unique_ptr<Operator> input, std::vector<Entry> computations);
 
    // Get the IUs
-   IUSet getIUs() const override { return vutil::combine(input->getIUs(), vutil::map<const IU*>(computations, [](const Entry& e) { return e.iu.get(); })); }
+   IUSet getIUs() const override { return input->getIUs() | IUSet(computations); }
    // Get the inputs
    std::vector<std::unique_ptr<Operator>> getInputs() override { return vutil::make(std::move(input)); }
    // Set the inputs
@@ -200,7 +200,7 @@ class Join : public Operator {
    JoinType getJoinType() const { return joinType; }
 
    // Get the IUs
-   IUSet getIUs() const override { return vutil::combine(left->getIUs(), right->getIUs()); }
+   IUSet getIUs() const override { return left->getIUs() | right->getIUs(); }
    // Get the inputs
    std::vector<std::unique_ptr<Operator>> getInputs() override { return vutil::make(std::move(left), std::move(right)); }
    // Set the inputs
@@ -342,7 +342,7 @@ class IndexJoin : public Operator {
    IndexJoin(std::unique_ptr<Operator> input, std::unique_ptr<IndexScan> indexScan);
 
    // Get the IUs
-   IUSet getIUs() const override { return vutil::combine(input->getIUs(), indexScan->getIUs()); }
+   IUSet getIUs() const override { return input->getIUs() | indexScan->getIUs(); }
    // Get the inputs
    std::vector<std::unique_ptr<Operator>> getInputs() override { return vutil::make(std::move(input)); }
    // Set the inputs

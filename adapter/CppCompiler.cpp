@@ -85,8 +85,22 @@ void CppCompiler::writeOutput(CppWriter& writer, const Output& output) const {
             if (output.flags & OptimizeScans) opt.optimizeScans();
             if (output.flags & OptimizeJoins) opt.optimizeJoins();
 
+            writer.writeln("if (limit > 0) {");
+            writer.write("std::cout << ");
+            bool first = true;
+            for (auto c : res.getBinding().getColumns()) {
+                if (first) 
+                        first = false;
+                else
+                    writer.write(" << \", \" << ");
+                writer.write(c.name);
+            }
+            writer.writeln(" << std::endl;");
+            writer.writeln("}");
+
             auto tree = opt.get();
-            tree->generate(writer, [&]() {
+
+            tree->generate(writer, IUSet(res.getBinding().getColumns()), [&]() {
                 writer.writeln("if (limit > 0) {");
                 writer.writeln("limit -= 1;");
                 writer.write("std::cout << ");

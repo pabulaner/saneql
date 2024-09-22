@@ -144,7 +144,7 @@ class ComparisonExpression : public Expression {
    /// Get the equi join property
    bool equiJoinProperty() const override { return mode == Mode::Equal && left->equiJoinProperty() && right->equiJoinProperty(); }
    /// Get the IUs
-   virtual IUSet getIUs() const { return vutil::combine<const IU*>(left->getIUs(), right->getIUs()); }
+   virtual IUSet getIUs() const { return left->getIUs() | right->getIUs(); }
 
    /// Generate SQL
    void generate(CppWriter& out) override;
@@ -163,7 +163,7 @@ class BetweenExpression : public Expression {
    BetweenExpression(std::unique_ptr<Expression> base, std::unique_ptr<Expression> lower, std::unique_ptr<Expression> upper, Collate collate);
 
    /// Get the IUs
-   virtual IUSet getIUs() const { return vutil::combine<const IU*>(base->getIUs(), lower->getIUs(), upper->getIUs()); }
+   virtual IUSet getIUs() const { return base->getIUs() | lower->getIUs() | upper->getIUs(); }
 
    /// Generate SQL
    void generate(CppWriter& out) override;
@@ -215,7 +215,7 @@ class BinaryExpression : public Expression {
    BinaryExpression(std::unique_ptr<Expression> left, std::unique_ptr<Expression> right, Type resultType, Operation op);
 
    /// Get the IUs
-   virtual IUSet getIUs() const { return vutil::combine<const IU*>(left->getIUs(), right->getIUs()); }
+   virtual IUSet getIUs() const { return left->getIUs() | right->getIUs(); }
 
    /// Generate SQL
    void generate(CppWriter& out) override;
@@ -282,7 +282,7 @@ class SubstrExpression : public Expression {
    SubstrExpression(std::unique_ptr<Expression> value, std::unique_ptr<Expression> from, std::unique_ptr<Expression> len);
 
    /// Get the IUs
-   virtual IUSet getIUs() const { return vutil::combine<const IU*>(value->getIUs(), from->getIUs(), len->getIUs()); }
+   virtual IUSet getIUs() const { return value->getIUs() | from->getIUs() | len->getIUs(); }
 
    /// Generate SQL
    void generate(CppWriter& out) override;
@@ -395,6 +395,9 @@ class Aggregate : public Expression, public AggregationLike {
    public:
    /// Constructor
    Aggregate(std::unique_ptr<Operator> input, std::vector<Aggregation> aggregates, std::unique_ptr<Expression> computation);
+
+   /// Get the IUs
+   virtual IUSet getIUs() const;
 
    // Generate SQL
    void generate(CppWriter& out) override;

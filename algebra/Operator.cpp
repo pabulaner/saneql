@@ -27,7 +27,7 @@ IUSet TableScan::getKeyIUs() const
 
    for (auto& c : columns) {
       if (c.isKey) {
-         result.push_back(c.iu.get());
+         result.add(c.iu.get());
       }
    }
 
@@ -103,7 +103,7 @@ SetOperation::SetOperation(unique_ptr<Operator> left, unique_ptr<Operator> right
 {
 }
 //---------------------------------------------------------------------------
-void SetOperation::generate(CppWriter&, std::function<void()>)
+void SetOperation::generate(CppWriter&, const IUSet&, std::function<void()>)
 // Generate SQL
 {
    throw std::runtime_error("SetOperation is not implemented");
@@ -131,22 +131,22 @@ void Join::generate(CppWriter& out, const IUSet& required, std::function<void()>
    IUSet rightPayloadIUs;
 
    for (auto iu : left->getIUs()) {
-      if (!vutil::contains(leftKeyIUs, iu) && required.contains(iu)) {
-         leftPayloadIUs.push_back(iu);
+      if (!leftKeyIUs.contains(iu) && required.contains(iu)) {
+         leftPayloadIUs.add(iu);
       }
    }
    for (auto iu : right->getIUs()) {
-      if (!vutil::contains(rightKeyIUs, iu) && required.contains(iu)) {
-         rightPayloadIUs.push_back(iu);
+      if (!rightKeyIUs.contains(iu) && required.contains(iu)) {
+         rightPayloadIUs.add(iu);
       }
    }
 
    const IU mapIU{Type::getUnknown()};
 
    out.write("std::unordered_multimap<std::tuple<");
-   out.writeTypes(vutil::map<Type>(leftKeyIUs, [](const IU* iu) { return iu->getType(); }));
+   out.writeTypes(leftKeyIUs.getTypes());
    out.write(">, std::tuple<");
-   out.writeTypes(vutil::map<Type>(leftPayloadIUs, [](const IU* iu) { return iu->getType(); }));
+   out.writeTypes(leftPayloadIUs.getTypes());
    out.write(">> ");
    out.writeIU(&mapIU);
    out.writeln(";");
@@ -212,7 +212,7 @@ void GroupBy::generate(CppWriter& out, const IUSet& required, std::function<void
       }
    }
 
-   std::vector<Aggregate> requiredAggregates = vutil::filter(aggregates, [](const Aggregate& a) { return required.contains(a.iu.get()); })
+   std::vector<Aggregation> requiredAggregates = vutil::filter(aggregates, [&](const Aggregation& a) { return required.contains(a.iu.get()); });
    const IU mapIU{Type::getUnknown()};
 
    out.write("std::unordered_map<std::tuple<");
@@ -420,7 +420,7 @@ Window::Window(unique_ptr<Operator> input, vector<Aggregation> aggregates, vecto
 {
 }
 //---------------------------------------------------------------------------
-void Window::generate(CppWriter&, std::function<void()>)
+void Window::generate(CppWriter&, const IUSet&, std::function<void()>)
 // Generate SQL
 {
    throw std::runtime_error("Window is not implemented");
@@ -432,7 +432,7 @@ InlineTable::InlineTable(vector<unique_ptr<algebra::IU>> columns, vector<unique_
 {
 }
 //---------------------------------------------------------------------------
-void InlineTable::generate(CppWriter&, std::function<void()>)
+void InlineTable::generate(CppWriter&, const IUSet&, std::function<void()>)
 // Generate SQL
 {
    throw std::runtime_error("InlineTable is not implemented");
