@@ -29,7 +29,7 @@ class TreeOperator : public Operator {
     // Set the inputs
     void setInputs(std::vector<std::unique_ptr<Operator>> inputs) override { input = std::move(inputs[0]); }
     // Generate Cpp
-    void generate(CppWriter& out, std::function<void()> consume) override { input->generate(out, consume); }
+    void generate(CppWriter& out, const IUSet& required, std::function<void()> consume) override { input->generate(out, required, consume); }
 };
 
 class Optimizer {

@@ -27,7 +27,11 @@ public:
     IUSet(const std::vector<IUType>& ius);
 
     template <typename T>
-    IUSet(const std::vector<T>& container);
+    IUSet(const std::vector<T>& container) {
+        for (const T& value : container) {
+            ius.push_back(value.iu.get());
+        }
+    }
 
     IUType operator[](size_t index) const;
 

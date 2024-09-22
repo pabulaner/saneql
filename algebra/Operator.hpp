@@ -15,7 +15,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //---------------------------------------------------------------------------
 namespace adapter {
-class CppIU;
 class CppWriter;
 class Optimizer;
 }

@@ -75,7 +75,7 @@ Operator* getIUOperator(Operator* tree, IUSet ius) {
         IUSet opIUs = op->getIUs();
 
         for (auto iu : ius) {
-            if (!vutil::contains(opIUs, iu)) {
+            if (!opIUs.contains(iu)) {
                 return true;
             }
         }
@@ -95,7 +95,7 @@ std::pair<IUSet, IUSet> getJoinKeyIUs(Operator* left, Operator* right, Expressio
         auto l = getJoinKeyIUs(left, right, b->left.get());
         auto r = getJoinKeyIUs(left, right, b->right.get());
         
-        return {vutil::combine(l.first, r.first), vutil::combine(l.second, r.second)};
+        return {l.first | r.first, l.second | r.second};
     }
     if (c && c->mode == ComparisonExpression::Equal) {
         IURef* l = dynamic_cast<IURef*>(c->left.get());
@@ -106,10 +106,10 @@ std::pair<IUSet, IUSet> getJoinKeyIUs(Operator* left, Operator* right, Expressio
         auto rightIUs = right->getIUs();
 
         if (l && r) {
-            if (vutil::contains(leftIUs, leftIU) && vutil::contains(rightIUs, rightIU)) {
+            if (leftIUs.contains(leftIU) && rightIUs.contains(rightIU)) {
                 return {{leftIU}, {rightIU}};
             }
-            if (vutil::contains(leftIUs, rightIU) && vutil::contains(rightIUs, leftIU)) {
+            if (leftIUs.contains(rightIU) && rightIUs.contains(leftIU)) {
                 return {{rightIU}, {leftIU}};
             }
         }

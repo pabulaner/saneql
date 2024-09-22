@@ -96,11 +96,11 @@ void Optimizer::optimizeScans() {
                 size_t leftIUCount = c->left->getIUs().size();
                 size_t rightIUCount = c->right->getIUs().size();
 
-                if (leftAsIURef && rightIUCount == 0 && vutil::contains(keyIUs, leftAsIURef->getIU()) && !vutil::contains(indexIUs, leftAsIURef->getIU())) {
-                    indexIUs.push_back(leftAsIURef->getIU());
+                if (leftAsIURef && rightIUCount == 0 && keyIUs.contains(leftAsIURef->getIU()) && !indexIUs.contains(leftAsIURef->getIU())) {
+                    indexIUs.add(leftAsIURef->getIU());
                     indexExpressions.push_back(std::move(c->right));
-                } else if (rightAsIURef && leftIUCount == 0 && vutil::contains(keyIUs, rightAsIURef->getIU()) && !vutil::contains(indexIUs, rightAsIURef->getIU())) {
-                    indexIUs.push_back(rightAsIURef->getIU());
+                } else if (rightAsIURef && leftIUCount == 0 && keyIUs.contains(rightAsIURef->getIU()) && !indexIUs.contains(rightAsIURef->getIU())) {
+                    indexIUs.add(rightAsIURef->getIU());
                     indexExpressions.push_back(std::move(c->left));
                 } else {
                     remainingExpressions.push_back(std::move(r));
@@ -180,7 +180,7 @@ void Optimizer::optimizeJoins() {
             }
 
             for (auto iu : tableKeyIUs) {
-                if (!vutil::contains(joinKeyIUs, iu)) {
+                if (!joinKeyIUs.contains(iu)) {
                     return false;
                 }
             }
@@ -195,9 +195,9 @@ void Optimizer::optimizeJoins() {
 
             for (auto iu : tableKeyIUs) {
                 for (size_t i = 0; i < indexIUs->size(); i++) {
-                    if (indexIUs->at(i) == iu) {
-                        indexResult.push_back(indexIUs->at(i));
-                        otherResult.push_back(otherIUs->at(i));
+                    if ((*indexIUs)[i] == iu) {
+                        indexResult.add((*indexIUs)[i]);
+                        otherResult.add((*otherIUs)[i]);
                     }
                 }
             }
@@ -227,7 +227,7 @@ void Optimizer::optimizeJoins() {
             Operator* out = outil::getOutputOperator(tree.get(), join);
             TableScan* scanCasted = static_cast<TableScan*>(scan.get());
             
-            std::vector<std::unique_ptr<Expression>> indexIURefs = vutil::map<std::unique_ptr<Expression>>(indexIUs, [](const IU* iu) { return std::make_unique<IURef>(iu); });
+            std::vector<std::unique_ptr<Expression>> indexIURefs = vutil::map<std::unique_ptr<Expression>>(indexIUs.data(), [](const IU* iu) { return std::make_unique<IURef>(iu); });
             std::unique_ptr<IndexScan> indexScan = std::make_unique<IndexScan>(std::move(scanCasted->name), std::move(scanCasted->columns), std::move(indexIURefs));
             std::unique_ptr<IndexJoin> indexJoin = std::make_unique<IndexJoin>(std::move(input), std::move(indexScan));
             std::vector<std::unique_ptr<Operator>> inputs = out->getInputs();

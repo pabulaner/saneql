@@ -212,7 +212,6 @@ void GroupBy::generate(CppWriter& out, const IUSet& required, std::function<void
       }
    }
 
-   std::vector<Aggregation> requiredAggregates = vutil::filter(aggregates, [&](const Aggregation& a) { return required.contains(a.iu.get()); });
    const IU mapIU{Type::getUnknown()};
 
    out.write("std::unordered_map<std::tuple<");
@@ -220,7 +219,7 @@ void GroupBy::generate(CppWriter& out, const IUSet& required, std::function<void
    out.write(">, std::tuple<");
 
    bool first = true;
-   for (auto& a : requiredAggregates) {
+   for (auto& a : aggregates) {
       if (required.contains(a.iu.get())) {
          if (first)
             first = false;
@@ -243,7 +242,18 @@ void GroupBy::generate(CppWriter& out, const IUSet& required, std::function<void
    out.writeIU(&mapIU);
    out.writeln(";");
 
-   input->generate(out, required | IUSet(groupBy) | IUSet(requiredAggregates), [&]() {
+   IUSet otherRequired;
+
+   for (auto& e : groupBy) {
+      otherRequired = otherRequired | e.value->getIUs();
+   }
+   for (auto& a : aggregates) {
+      if (a.value.get()) {
+         otherRequired = otherRequired | a.value->getIUs();
+      }
+   }
+
+   input->generate(out, required | otherRequired, [&]() {
       out.write("auto it = ");
       out.writeIU(&mapIU);
       out.write(".find({");
@@ -260,7 +270,7 @@ void GroupBy::generate(CppWriter& out, const IUSet& required, std::function<void
       out.write("}, {");
 
       bool first = true;
-      for (auto& a : requiredAggregates) {
+      for (auto& a : aggregates) {
          if (required.contains(a.iu.get())) {
             if (first)
                first = false;
@@ -281,9 +291,9 @@ void GroupBy::generate(CppWriter& out, const IUSet& required, std::function<void
       out.writeln("}});");
       out.writeln("} else {");
 
-      for (size_t i = 0; i < requiredAggregates.size(); i++) {
+      for (size_t i = 0; i < aggregates.size(); i++) {
          std::string value = "std::get<" + std::to_string(i) + ">(it->second)";
-         Aggregation& a = requiredAggregates[i];
+         Aggregation& a = aggregates[i];
 
          out.write(value + " ");
          switch (a.op) {
@@ -314,8 +324,8 @@ void GroupBy::generate(CppWriter& out, const IUSet& required, std::function<void
             out.writeln(" = std::get<" + std::to_string(i) + ">(it.first);");
          }
    }
-   for (size_t i = 0; i < requiredAggregates.size(); i++) {
-      Aggregation& a = requiredAggregates[i];
+   for (size_t i = 0; i < aggregates.size(); i++) {
+      Aggregation& a = aggregates[i];
 
       out.write("const ");
       out.writeType(a.iu->getType());
@@ -368,7 +378,13 @@ void Sort::generate(CppWriter& out, const IUSet& required, std::function<void()>
    out.writeIU(&vecIU);
    out.writeln(";");
 
-   input->generate(out, required | IUSet(order), [&]() {
+   IUSet requiredOrderIUs;
+
+   for (auto& o : order) {
+      requiredOrderIUs = requiredOrderIUs | o.value->getIUs();
+   }
+
+   input->generate(out, required | requiredOrderIUs, [&]() {
       out.writeIU(&vecIU);
       out.write(".push_back({");
       out.writeExpressions(vutil::map<Expression*>(order, [&](const Entry& e) { first = false; return e.value.get(); }));

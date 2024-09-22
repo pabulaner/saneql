@@ -93,14 +93,17 @@ void CppCompiler::writeOutput(CppWriter& writer, const Output& output) const {
                         first = false;
                 else
                     writer.write(" << \", \" << ");
-                writer.write(c.name);
+                writer.write("\"" + c.name + "\"");
             }
             writer.writeln(" << std::endl;");
             writer.writeln("}");
 
-            auto tree = opt.get();
+            typedef saneql::SemanticAnalysis::BindingInfo::Column Column;
 
-            tree->generate(writer, IUSet(res.getBinding().getColumns()), [&]() {
+            auto tree = opt.get();
+            IUSet required = IUSet(vutil::map<const IU*>(res.getBinding().getColumns(), [](const Column& c) { return c.iu; }));
+
+            tree->generate(writer, required, [&]() {
                 writer.writeln("if (limit > 0) {");
                 writer.writeln("limit -= 1;");
                 writer.write("std::cout << ");

@@ -20,36 +20,7 @@ using namespace saneql::algebra;
 
 namespace adapter {
 
-class CppIU {
-    public:
-    enum Type {
-        Struct,
-        ScanOp,
-        SelectOp,
-        MapOp,
-        JoinOp,
-        GroupByOp,
-        OutputOp
-    };
-
-    private:
-    /// The type
-    Type type;
-    /// The name
-    std::string name;
-    /// The ref
-    std::string ref;
-
-    public:
-    /// The constructor
-    CppIU(Type type, const std::string& name) : type(type), name(name), ref('&' + name) {}
-    /// Get the type
-    Type getType() const { return type; }
-    /// Get the name
-    const std::string& getName() const { return name; }
-    /// Get the ref
-    const std::string& getRef() const { return ref; }
-};
+class IUSet;
 
 class CppWriter {
     /// The result

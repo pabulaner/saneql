@@ -15,13 +15,6 @@ IUSet::IUSet(const std::vector<IUType>& ius)
     : ius(ius) 
 {}
 
-template <typename T>
-IUSet::IUSet(const std::vector<T>& container) {
-    for (const T& value : container) {
-        ius.push_back(value.iu.get());
-    }
-}
-
 IUSet::IUType IUSet::operator[](size_t index) const {
     return ius[index];
 }
