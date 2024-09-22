@@ -6,6 +6,6 @@ customer_tpch
 .join(nation_tpch, s_nationkey=n_nationkey)
 .join(region_tpch.filter(r_name='ASIA'), n_regionkey=r_regionkey)
 .groupby({n_name}, {revenue:=sum(l_extendedprice * (1 - l_discount))})
-.orderby({revenue.desc()})
+.orderby({revenue})
 .project({n_name, revenue})
 
