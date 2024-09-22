@@ -4,7 +4,7 @@ let min_supplycost_for_part(p_partkey) :=
    .join(supplier_tpch, s_suppkey=ps_suppkey)
    .join(nation_tpch, s_nationkey=n_nationkey)
    .join(region_tpch.filter(r_name='EUROPE'), n_regionkey=r_regionkey).aggregate(min(ps_supplycost)),
-part
+part_tpch
 .filter(condition:=p_size = 15)
 .join(partsupp_tpch, p_partkey = ps_partkey)
 .join(supplier_tpch, s_suppkey = ps_suppkey)
