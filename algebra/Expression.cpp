@@ -239,7 +239,69 @@ Aggregate::Aggregate(unique_ptr<Operator> input, vector<Aggregation> aggregates,
 void Aggregate::generate(CppWriter& out)
 // Generate SQL
 {
-   throw std::runtime_error("Aggregate is not implemented");
+   // validate
+   for (auto& a : aggregates) {
+      switch (a.op) {
+         case Op::Sum:
+         case Op::Avg:
+         case Op::Min:
+         case Op::Max:
+         case Op::CountStar: break;
+         default: throw std::runtime_error("Unsupported aggregate aggregation");
+      }
+   }
+
+   out.writeln("[&]() {");
+
+   for (auto& a : aggregates) {
+      if (a.op == Op::Avg) {
+         out.write("std::pair<");
+         out.writeType(a.iu->getType());
+         out.write(", ");
+         out.writeType(Type::getInteger());
+         out.write(">");
+      } else {
+         out.writeType(a.iu->getType());
+      }
+
+      out.write(" ");
+      out.writeIU(a.iu.get());
+      out.write(" = ");
+
+      switch (a.op) {
+         case Op::Sum: out.write("0"); break;
+         case Op::Min: out.write("std::numeric_limits<"); out.writeType(a.iu->getType()); out.write(">::max()"); break;
+         case Op::Max: out.write("std::numeric_limits<"); out.writeType(a.iu->getType()); out.write(">::min()"); break;
+         case Op::Avg: out.write("{0, 0}"); break;
+         case Op::CountStar: out.write("0"); break;
+         default: throw;
+      }
+
+      out.writeln(";");
+   }
+
+   input->generate(out, [&]() {
+      for (size_t i = 0; i < aggregates.size(); i++) {
+         Aggregation& a = aggregates[i];
+         std::string name = out.getIUName(a.iu.get());
+
+         out.write(name + " ");
+         switch (a.op) {
+            case Op::Sum: out.write("+= "); out.writeExpression(a.value.get()); break;
+            case Op::Min: out.write("= std::min("); out.writeIU(a.iu.get()); out.write(", "); out.writeExpression(a.value.get()); out.write(")"); break;
+            case Op::Max: out.write("= std::max("); out.writeIU(a.iu.get()); out.write(", "); out.writeExpression(a.value.get()); out.write(")"); break;
+            case Op::Avg: out.write("= {" + name + ".first + "); out.writeExpression(a.value.get()); out.write(", " + name + ".second + 1}"); break;
+            case Op::CountStar: out.write("+= 1"); break;
+            default: throw;
+         }
+         out.writeln(";");
+      }
+   });
+
+   out.write("return ");
+   out.writeExpression(computation.get());
+   out.writeln(";");
+   out.write("}()");
 }
 //---------------------------------------------------------------------------
 ForeignCall::ForeignCall(string name, Type returnType, vector<unique_ptr<Expression>> arguments, CallType callType)

@@ -75,7 +75,9 @@ void CppCompiler::writeOutput(CppWriter& writer, const Output& output) const {
         auto res = semana.analyzeQuery(tree);
 
         if (res.isScalar()) {
+            writer.write("std::cout << ");
             res.scalar()->generate(writer);
+            writer.writeln(" << std::endl;");
         } else {
             Optimizer opt(std::move(res.table()));
 

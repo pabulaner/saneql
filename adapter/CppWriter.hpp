@@ -82,6 +82,8 @@ class CppWriter {
     /// Write expressions
     void writeExpressions(const std::vector<Expression*>& exp);
 
+    /// Get IU name
+    std::string getIUName(const IU* iu) const;
     /// Get the final result
     std::string getResult() const { return result; }
 };

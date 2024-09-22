@@ -79,6 +79,14 @@ void CppWriter::writeExpression(Expression* exp) {
     exp->generate(*this);
 }
 
+std::string CppWriter::getIUName(const IU* iu) const {
+    if (auto iter = iuNames.find(iu); iter != iuNames.end()) {
+        return iter->second;
+    }
+
+    return "";
+}
+
 void CppWriter::writeExpressions(const std::vector<Expression*>& exp) {
     bool first = true;
     for (auto e : exp) {

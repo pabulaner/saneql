@@ -1,5 +1,5 @@
-let stock_count(o_id, w_id, d_id, threshold) := orderline
+let stock_count(o_id, w_id, d_id, threshold) = order_line
     .filter(ol_w_id = o_id && ol_d_id = d_id && ol_o_id = o_id && ol_o_id > o_id - 20)
     .join(stock.filter(s_quantity < threshold), s_w_id = ol_w_id && s_i_id = ol_i_id)
-    .aggregate(count()),
-stock_count(0, 1, 5, 10) + stock_count(1, 2, 6, 11)
+    .aggregate(count())
+stock_count(0, 1, 5)
