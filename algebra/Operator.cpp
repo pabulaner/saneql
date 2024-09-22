@@ -168,11 +168,14 @@ void Join::generate(CppWriter& out, const IUSet& required, std::function<void()>
 
       for (size_t i = 0; i < leftKeyIUs.size(); i++) {
          auto iu = leftKeyIUs[i];
-         out.write("const ");
-         out.writeType(iu->getType());
-         out.write("& ");
-         out.writeIU(iu);
-         out.writeln(" = std::get<" + std::to_string(i) + ">(range.first->first);");
+         
+         if (required.contains(iu)) {
+            out.write("const ");
+            out.writeType(iu->getType());
+            out.write("& ");
+            out.writeIU(iu);
+            out.writeln(" = std::get<" + std::to_string(i) + ">(range.first->first);");
+         }
       }
       for (size_t i = 0; i < leftPayloadIUs.size(); i++) {
          auto iu = leftPayloadIUs[i];
