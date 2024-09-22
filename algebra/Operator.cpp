@@ -20,10 +20,10 @@ TableScan::TableScan(string name, vector<Column> columns)
 {
 }
 //---------------------------------------------------------------------------
-std::vector<const IU*> TableScan::getKeyIUs() const 
+IUSet TableScan::getKeyIUs() const 
 // Get the key IUs
 { 
-   std::vector<const IU*> result;
+   IUSet result;
 
    for (auto& c : columns) {
       if (c.isKey) {
@@ -34,13 +34,13 @@ std::vector<const IU*> TableScan::getKeyIUs() const
    return result;
 }
 //---------------------------------------------------------------------------
-void TableScan::generate(CppWriter& out, const std::vector<const IU*>& required, std::function<void()> consume)
+void TableScan::generate(CppWriter& out, const IUSet& required, std::function<void()> consume)
 // Generate SQL
 {
    out.writeln("db->" + name + ".forEach([&](auto& key, auto& value) {");
 
    for (auto& c : columns) {
-      if (vutil::contains(required, c.iu.get())) {
+      if (required.contains(c.iu.get())) {
          out.write("const ");
          out.writeType(c.iu->getType());
          out.write("& ");
@@ -61,7 +61,7 @@ Select::Select(unique_ptr<Operator> input, unique_ptr<Expression> condition)
 {
 }
 //---------------------------------------------------------------------------
-void Select::generate(CppWriter& out, const std::vector<const IU*>& required, std::function<void()> consume)
+void Select::generate(CppWriter& out, const IUSet& required, std::function<void()> consume)
 // Generate SQL
 {
    input->generate(out, required | condition->getIUs(), [&]() {
@@ -79,12 +79,12 @@ Map::Map(unique_ptr<Operator> input, vector<Entry> computations)
 {
 }
 //---------------------------------------------------------------------------
-void Map::generate(CppWriter& out, const std::vector<const IU*>& required, std::function<void()> consume)
+void Map::generate(CppWriter& out, const IUSet& required, std::function<void()> consume)
 // Generate SQL
 {
-   input->generate(out, required | vutil::map<const IU*>(computations), [&]() {
+   input->generate(out, required | IUSet(computations), [&]() {
       for (auto& c : computations) {
-         if (vutil::contains(required, c.iu.get())) {
+         if (required.contains(c.iu.get())) {
             out.writeType(c.iu->getType());
             out.write(" ");
             out.writeIU(c.iu.get());
@@ -115,7 +115,7 @@ Join::Join(unique_ptr<Operator> left, unique_ptr<Operator> right, unique_ptr<Exp
 {
 }
 //---------------------------------------------------------------------------
-void Join::generate(CppWriter& out, const std::vector<const IU*>& required, std::function<void()> consume)
+void Join::generate(CppWriter& out, const IUSet& required, std::function<void()> consume)
 // Generate SQL
 {
    // validate
@@ -123,20 +123,20 @@ void Join::generate(CppWriter& out, const std::vector<const IU*>& required, std:
       throw std::runtime_error("Unsupported join type");
    }
 
-   std::pair<std::vector<const IU*>, std::vector<const IU*>> keyIUs = outil::getJoinKeyIUs(left.get(), right.get(), condition.get());
-   std::vector<const IU*> leftKeyIUs = std::move(keyIUs.first);
-   std::vector<const IU*> rightKeyIUs = std::move(keyIUs.second);
+   std::pair<IUSet, IUSet> keyIUs = outil::getJoinKeyIUs(left.get(), right.get(), condition.get());
+   IUSet leftKeyIUs = std::move(keyIUs.first);
+   IUSet rightKeyIUs = std::move(keyIUs.second);
 
-   std::vector<const IU*> leftPayloadIUs;
-   std::vector<const IU*> rightPayloadIUs;
+   IUSet leftPayloadIUs;
+   IUSet rightPayloadIUs;
 
    for (auto iu : left->getIUs()) {
-      if (!vutil::contains(leftKeyIUs, iu)) {
+      if (!vutil::contains(leftKeyIUs, iu) && required.contains(iu)) {
          leftPayloadIUs.push_back(iu);
       }
    }
    for (auto iu : right->getIUs()) {
-      if (!vutil::contains(rightKeyIUs, iu)) {
+      if (!vutil::contains(rightKeyIUs, iu) && required.contains(iu)) {
          rightPayloadIUs.push_back(iu);
       }
    }
@@ -151,7 +151,7 @@ void Join::generate(CppWriter& out, const std::vector<const IU*>& required, std:
    out.writeIU(&mapIU);
    out.writeln(";");
 
-   left->generate(out, [&]() {
+   left->generate(out, required | leftKeyIUs, [&]() {
       out.writeIU(&mapIU);
       out.write(".insert({{");
       out.writeIUs(leftKeyIUs);
@@ -159,7 +159,7 @@ void Join::generate(CppWriter& out, const std::vector<const IU*>& required, std:
       out.writeIUs(leftPayloadIUs);
       out.writeln("}});");
    });
-   right->generate(out, [&]() {
+   right->generate(out, required | rightKeyIUs, [&]() {
       out.write("for (auto range = ");
       out.writeIU(&mapIU);
       out.write(".equal_range({");
@@ -194,7 +194,7 @@ GroupBy::GroupBy(unique_ptr<Operator> input, vector<Entry> groupBy, vector<Aggre
 {
 }
 //---------------------------------------------------------------------------
-void GroupBy::generate(CppWriter& out, const std::vector<const IU*>& required, std::function<void()> consume)
+void GroupBy::generate(CppWriter& out, const IUSet& required, std::function<void()> consume)
 // Generate SQL
 {
    // validate
@@ -209,6 +209,7 @@ void GroupBy::generate(CppWriter& out, const std::vector<const IU*>& required, s
       }
    }
 
+   std::vector<Aggregate> requiredAggregates = vutil::filter(aggregates, [](const Aggregate& a) { return required.contains(a.iu.get()); })
    const IU mapIU{Type::getUnknown()};
 
    out.write("std::unordered_map<std::tuple<");
@@ -216,20 +217,22 @@ void GroupBy::generate(CppWriter& out, const std::vector<const IU*>& required, s
    out.write(">, std::tuple<");
 
    bool first = true;
-   for (auto& a : aggregates) {
-      if (first)
-         first = false;
-      else
-         out.write(", ");
-      
-      if (a.op == Op::Avg) {
-         out.write("std::pair<");
-         out.writeType(a.iu->getType());
-         out.write(", ");
-         out.writeType(Type::getInteger());
-         out.write(">");
-      } else {
-         out.writeType(a.iu->getType());
+   for (auto& a : requiredAggregates) {
+      if (required.contains(a.iu.get())) {
+         if (first)
+            first = false;
+         else
+            out.write(", ");
+         
+         if (a.op == Op::Avg) {
+            out.write("std::pair<");
+            out.writeType(a.iu->getType());
+            out.write(", ");
+            out.writeType(Type::getInteger());
+            out.write(">");
+         } else {
+            out.writeType(a.iu->getType());
+         }
       }
    }
 
@@ -237,7 +240,7 @@ void GroupBy::generate(CppWriter& out, const std::vector<const IU*>& required, s
    out.writeIU(&mapIU);
    out.writeln(";");
 
-   input->generate(out, [&]() {
+   input->generate(out, required | IUSet(groupBy) | IUSet(requiredAggregates), [&]() {
       out.write("auto it = ");
       out.writeIU(&mapIU);
       out.write(".find({");
@@ -254,28 +257,30 @@ void GroupBy::generate(CppWriter& out, const std::vector<const IU*>& required, s
       out.write("}, {");
 
       bool first = true;
-      for (auto& a : aggregates) {
-         if (first)
-            first = false;
-         else 
-            out.write(", ");
+      for (auto& a : requiredAggregates) {
+         if (required.contains(a.iu.get())) {
+            if (first)
+               first = false;
+            else 
+               out.write(", ");
 
-         switch (a.op) {
-            case Op::Sum: 
-            case Op::Min: 
-            case Op::Max: out.writeExpression(a.value.get()); break;
-            case Op::Avg: out.write("{"); out.writeExpression(a.value.get()); out.write(", 1}"); break;
-            case Op::CountStar: out.write("1"); break;
-            default: throw;
+            switch (a.op) {
+               case Op::Sum: 
+               case Op::Min: 
+               case Op::Max: out.writeExpression(a.value.get()); break;
+               case Op::Avg: out.write("{"); out.writeExpression(a.value.get()); out.write(", 1}"); break;
+               case Op::CountStar: out.write("1"); break;
+               default: throw;
+            }
          }
       }
 
       out.writeln("}});");
       out.writeln("} else {");
 
-      for (size_t i = 0; i < aggregates.size(); i++) {
+      for (size_t i = 0; i < requiredAggregates.size(); i++) {
          std::string value = "std::get<" + std::to_string(i) + ">(it->second)";
-         Aggregation& a = aggregates[i];
+         Aggregation& a = requiredAggregates[i];
 
          out.write(value + " ");
          switch (a.op) {
@@ -297,14 +302,17 @@ void GroupBy::generate(CppWriter& out, const std::vector<const IU*>& required, s
    out.writeln(") {");
    for (size_t i = 0; i < groupBy.size(); i++) {
          auto iu = groupBy[i].iu.get();
-         out.write("const ");
-         out.writeType(iu->getType());
-         out.write("& ");
-         out.writeIU(iu);
-         out.writeln(" = std::get<" + std::to_string(i) + ">(it.first);");
+         
+         if (required.contains(iu)) {
+            out.write("const ");
+            out.writeType(iu->getType());
+            out.write("& ");
+            out.writeIU(iu);
+            out.writeln(" = std::get<" + std::to_string(i) + ">(it.first);");
+         }
    }
-   for (size_t i = 0; i < aggregates.size(); i++) {
-      Aggregation& a = aggregates[i];
+   for (size_t i = 0; i < requiredAggregates.size(); i++) {
+      Aggregation& a = requiredAggregates[i];
 
       out.write("const ");
       out.writeType(a.iu->getType());
@@ -328,7 +336,7 @@ Sort::Sort(unique_ptr<Operator> input, vector<Entry> order, optional<uint64_t> l
 {
 }
 //---------------------------------------------------------------------------
-void Sort::generate(CppWriter& out, const std::vector<const IU*>& required, std::function<void()> consume)
+void Sort::generate(CppWriter& out, const IUSet& required, std::function<void()> consume)
 // Generate SQL
 {
    // validate
@@ -341,13 +349,12 @@ void Sort::generate(CppWriter& out, const std::vector<const IU*>& required, std:
       throw std::runtime_error("Unsupported orderby offset or limit");
    }
 
-   std::vector<const IU*> ius = input->getIUs();
    const IU vecIU{Type::getUnknown()};
 
    bool first = true;
    out.write("std::vector<std::tuple<");
    out.writeTypes(vutil::map<Type>(order, [&](const Entry& e) { first = false; return e.value->getType(); }));
-   for (auto iu : ius) {
+   for (auto iu : required) {
       if (first) 
          first = false;
       else 
@@ -358,11 +365,11 @@ void Sort::generate(CppWriter& out, const std::vector<const IU*>& required, std:
    out.writeIU(&vecIU);
    out.writeln(";");
 
-   input->generate(out, [&]() {
+   input->generate(out, required | IUSet(order), [&]() {
       out.writeIU(&vecIU);
       out.write(".push_back({");
       out.writeExpressions(vutil::map<Expression*>(order, [&](const Entry& e) { first = false; return e.value.get(); }));
-      for (auto iu : input->getIUs()) {
+      for (auto iu : required) {
          if (first) 
             first = false;
          else 
@@ -391,8 +398,8 @@ void Sort::generate(CppWriter& out, const std::vector<const IU*>& required, std:
    out.writeIU(&vecIU);
    out.writeln(") {");
    
-   for (size_t i = 0; i < ius.size(); i++) {
-      auto iu = ius[i];
+   for (size_t i = 0; i < required.size(); i++) {
+      auto iu = required[i];
       out.write("const ");
       out.writeType(iu->getType());
       out.write("& ");
@@ -434,7 +441,7 @@ IndexScan::IndexScan(std::string name, std::vector<TableScan::Column> columns, s
 {
 }
 //---------------------------------------------------------------------------
-void IndexScan::generate(CppWriter& out, const std::vector<const IU*>& required, std::function<void()> consume)
+void IndexScan::generate(CppWriter& out, const IUSet& required, std::function<void()> consume)
 // Generate SQL
 {
    out.write("db->" + name + ".lookup1({");
@@ -452,19 +459,23 @@ void IndexScan::generate(CppWriter& out, const std::vector<const IU*>& required,
 
    size_t i = 0;
    for (auto& c : columns) {
-      out.writeType(c.iu->getType());
-      out.write(" ");
-      out.writeIU(c.iu.get());
-      out.write(" = ");
+      if (required.contains(c.iu.get())) {
+         out.writeType(c.iu->getType());
+         out.write(" ");
+         out.writeIU(c.iu.get());
+         out.write(" = ");
 
-      // assumes that the key IUs are the same order as the index expressions
-      if (c.isKey) {
-         out.writeExpression(indexExpressions[i++].get());
-      } else {
-         out.write("value." + c.name);
+         // assumes that the key IUs are the same order as the index expressions
+         if (c.isKey) {
+            out.writeExpression(indexExpressions[i].get());
+         } else {
+            out.write("value." + c.name);
+         }
+
+         out.writeln(";");
       }
 
-      out.writeln(";");
+      i += 1;
    }
 
    consume();
@@ -477,11 +488,11 @@ IndexJoin::IndexJoin(unique_ptr<Operator> input, unique_ptr<IndexScan> indexScan
 {
 }
 //---------------------------------------------------------------------------
-void IndexJoin::generate(CppWriter& out, const std::vector<const IU*>& required, std::function<void()> consume)
+void IndexJoin::generate(CppWriter& out, const IUSet& required, std::function<void()> consume)
 // Generate SQL
 {
-   input->generate(out, [&]() {
-      indexScan->generate(out, consume);
+   input->generate(out, required, [&]() {
+      indexScan->generate(out, required, consume);
    });
 }
 //---------------------------------------------------------------------------

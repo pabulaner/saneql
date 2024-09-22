@@ -64,7 +64,7 @@ void CppWriter::writeIU(const IU* iu) {
     }
 }
 
-void CppWriter::writeIUs(const std::vector<const IU*>& ius) {
+void CppWriter::writeIUs(const IUSet& ius) {
     bool first = true;
     for (auto iu : ius) {
         if (first) 

@@ -22,10 +22,10 @@ std::vector<Operator*> getInputOperators(Operator* target);
 Operator* getOutputOperator(Operator* tree, Operator* target);
 
 // Get the operator that provides the specified ius
-Operator* getIUOperator(Operator* tree, std::vector<const IU*> ius);
+Operator* getIUOperator(Operator* tree, IUSet ius);
 
 // Get the join key IU pairs
-std::pair<std::vector<const IU*>, std::vector<const IU*>> getJoinKeyIUs(Operator* left, Operator* right, Expression* exp);
+std::pair<IUSet, IUSet> getJoinKeyIUs(Operator* left, Operator* right, Expression* exp);
 
 // Iterate over all operators of the given type
 template <typename TOp>

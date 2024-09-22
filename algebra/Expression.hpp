@@ -2,6 +2,7 @@
 #define H_saneql_Expression
 //---------------------------------------------------------------------------
 #include "adapter/VectorUtil.hpp"
+#include "adapter/IUSet.hpp"
 #include "infra/Schema.hpp"
 #include "semana/Functions.hpp"
 #include <memory>
@@ -45,7 +46,7 @@ class Expression {
    /// Get the equi join property (default = false)
    virtual bool equiJoinProperty() const { return false; }
    /// Get the IUs
-   virtual std::vector<const IU*> getIUs() const { return {}; }
+   virtual IUSet getIUs() const { return {}; }
 
    /// Generate SQL
    virtual void generate(CppWriter& out) = 0;
@@ -68,7 +69,7 @@ class IURef : public Expression {
    /// Get the equi join property
    bool equiJoinProperty() const override { return true; }
    /// Get the IUs
-   virtual std::vector<const IU*> getIUs() const { return {iu}; }
+   virtual IUSet getIUs() const { return {iu}; }
 
    /// Generate SQL
    void generate(CppWriter& out) override;
@@ -108,7 +109,7 @@ class CastExpression : public Expression {
    CastExpression(std::unique_ptr<Expression> input, Type type) : Expression(type), input(move(input)) {}
 
    /// Get the IUs
-   virtual std::vector<const IU*> getIUs() const { return input->getIUs(); }
+   virtual IUSet getIUs() const { return input->getIUs(); }
 
    /// Generate SQL
    void generate(CppWriter& out) override;
@@ -143,7 +144,7 @@ class ComparisonExpression : public Expression {
    /// Get the equi join property
    bool equiJoinProperty() const override { return mode == Mode::Equal && left->equiJoinProperty() && right->equiJoinProperty(); }
    /// Get the IUs
-   virtual std::vector<const IU*> getIUs() const { return vutil::combine<const IU*>(left->getIUs(), right->getIUs()); }
+   virtual IUSet getIUs() const { return vutil::combine<const IU*>(left->getIUs(), right->getIUs()); }
 
    /// Generate SQL
    void generate(CppWriter& out) override;
@@ -162,7 +163,7 @@ class BetweenExpression : public Expression {
    BetweenExpression(std::unique_ptr<Expression> base, std::unique_ptr<Expression> lower, std::unique_ptr<Expression> upper, Collate collate);
 
    /// Get the IUs
-   virtual std::vector<const IU*> getIUs() const { return vutil::combine<const IU*>(base->getIUs(), lower->getIUs(), upper->getIUs()); }
+   virtual IUSet getIUs() const { return vutil::combine<const IU*>(base->getIUs(), lower->getIUs(), upper->getIUs()); }
 
    /// Generate SQL
    void generate(CppWriter& out) override;
@@ -183,7 +184,7 @@ class InExpression : public Expression {
    InExpression(std::unique_ptr<Expression> probe, std::vector<std::unique_ptr<Expression>> values, Collate collate);
 
    /// Get the IUs
-   virtual std::vector<const IU*> getIUs() const { return {}; }
+   virtual IUSet getIUs() const { return {}; }
 
    /// Generate SQL
    void generate(CppWriter& out) override;
@@ -214,7 +215,7 @@ class BinaryExpression : public Expression {
    BinaryExpression(std::unique_ptr<Expression> left, std::unique_ptr<Expression> right, Type resultType, Operation op);
 
    /// Get the IUs
-   virtual std::vector<const IU*> getIUs() const { return vutil::combine<const IU*>(left->getIUs(), right->getIUs()); }
+   virtual IUSet getIUs() const { return vutil::combine<const IU*>(left->getIUs(), right->getIUs()); }
 
    /// Generate SQL
    void generate(CppWriter& out) override;
@@ -239,7 +240,7 @@ class UnaryExpression : public Expression {
    UnaryExpression(std::unique_ptr<Expression> input, Type resultType, Operation op);
 
    /// Get the IUs
-   virtual std::vector<const IU*> getIUs() const { return input->getIUs(); }
+   virtual IUSet getIUs() const { return input->getIUs(); }
 
    /// Generate SQL
    void generate(CppWriter& out) override;
@@ -264,7 +265,7 @@ class ExtractExpression : public Expression {
    ExtractExpression(std::unique_ptr<Expression> input, Part part);
 
    /// Get the IUs
-   virtual std::vector<const IU*> getIUs() const { return input->getIUs(); }
+   virtual IUSet getIUs() const { return input->getIUs(); }
 
    /// Generate SQL
    void generate(CppWriter& out) override;
@@ -281,7 +282,7 @@ class SubstrExpression : public Expression {
    SubstrExpression(std::unique_ptr<Expression> value, std::unique_ptr<Expression> from, std::unique_ptr<Expression> len);
 
    /// Get the IUs
-   virtual std::vector<const IU*> getIUs() const { return vutil::combine<const IU*>(value->getIUs(), from->getIUs(), len->getIUs()); }
+   virtual IUSet getIUs() const { return vutil::combine<const IU*>(value->getIUs(), from->getIUs(), len->getIUs()); }
 
    /// Generate SQL
    void generate(CppWriter& out) override;

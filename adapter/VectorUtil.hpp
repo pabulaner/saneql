@@ -32,8 +32,19 @@ bool contains(const std::vector<T>& vec, const T& value) {
 template <typename TOut, typename TIn, typename TMapFn>
 std::vector<TOut> map(const std::vector<TIn>& in, TMapFn map) {
     std::vector<TOut> result;
-    for (auto it = in.begin(); it != in.end(); it++) {
-        result.push_back(map(*it));
+    for (auto& value : in) {
+        result.push_back(map(value));
+    }
+    return result;
+}
+
+template <typename T, typename TFilterFn>
+std::vector<T> filter(const std::vector<T>& in, TFilterFn filter) {
+    std::vector<T> result;
+    for (auto& value : in) {
+        if (filter(value)) {
+            result.push_back(value);
+        }
     }
     return result;
 }

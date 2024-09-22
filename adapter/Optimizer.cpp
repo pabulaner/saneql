@@ -79,9 +79,9 @@ void Optimizer::optimizeScans() {
             continue;
         }
 
-        std::vector<const IU*> keyIUs = scan->getKeyIUs();
+        IUSet keyIUs = scan->getKeyIUs();
         std::vector<std::unique_ptr<Expression>> required = cutil::splitRequired(std::move(select->condition));
-        std::vector<const IU*> indexIUs;
+        IUSet indexIUs;
         std::vector<std::unique_ptr<Expression>> indexExpressions;
         std::vector<std::unique_ptr<Expression>> remainingExpressions;
 
@@ -174,7 +174,7 @@ void Optimizer::optimizeJoins() {
         TableScan* right = dynamic_cast<TableScan*>(join->right.get());
 
         // returns true if the joinKeyIUs match the tableKeyIUs
-        auto canBeIndexed = [](const std::vector<const IU*>& tableKeyIUs, const std::vector<const IU*>& joinKeyIUs) {
+        auto canBeIndexed = [](const IUSet& tableKeyIUs, const IUSet& joinKeyIUs) {
             if (tableKeyIUs.size() != joinKeyIUs.size()) {
                 return false;
             }
@@ -189,9 +189,9 @@ void Optimizer::optimizeJoins() {
         };
 
         // orders the key IUs from the joins to fit the order of the key IUs in the table
-        auto orderKeyIUs = [](const std::vector<const IU*> tableKeyIUs, std::vector<const IU*>* indexIUs, std::vector<const IU*>* otherIUs) {
-            std::vector<const IU*> indexResult;
-            std::vector<const IU*> otherResult;
+        auto orderKeyIUs = [](const IUSet tableKeyIUs, IUSet* indexIUs, IUSet* otherIUs) {
+            IUSet indexResult;
+            IUSet otherResult;
 
             for (auto iu : tableKeyIUs) {
                 for (size_t i = 0; i < indexIUs->size(); i++) {
@@ -208,7 +208,7 @@ void Optimizer::optimizeJoins() {
 
         std::unique_ptr<Operator> scan;
         std::unique_ptr<Operator> input;
-        std::vector<const IU*> indexIUs;
+        IUSet indexIUs;
 
         // check if left or right can be index joined
         if (left && canBeIndexed(left->getKeyIUs(), keyIUs.first)) {

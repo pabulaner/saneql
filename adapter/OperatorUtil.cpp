@@ -68,11 +68,11 @@ Operator* getOutputOperator(Operator* tree, Operator* target) {
     return nullptr;
 }
 
-Operator* getIUOperator(Operator* tree, std::vector<const IU*> ius) {
+Operator* getIUOperator(Operator* tree, IUSet ius) {
     Operator* result = nullptr;
 
     forEach<Operator>(tree, [&](Operator* op) {
-        std::vector<const IU*> opIUs = op->getIUs();
+        IUSet opIUs = op->getIUs();
 
         for (auto iu : ius) {
             if (!vutil::contains(opIUs, iu)) {
@@ -87,7 +87,7 @@ Operator* getIUOperator(Operator* tree, std::vector<const IU*> ius) {
     return result;
 }
 
-std::pair<std::vector<const IU*>, std::vector<const IU*>> getJoinKeyIUs(Operator* left, Operator* right, Expression* exp) {
+std::pair<IUSet, IUSet> getJoinKeyIUs(Operator* left, Operator* right, Expression* exp) {
     BinaryExpression* b = dynamic_cast<BinaryExpression*>(exp);
     ComparisonExpression* c = dynamic_cast<ComparisonExpression*>(exp);
 

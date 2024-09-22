@@ -23,7 +23,7 @@ class TreeOperator : public Operator {
         : input(std::move(input)) {}
 
     // Get the IUs
-    std::vector<const IU*> getIUs() const override { return input->getIUs(); }
+    IUSet getIUs() const override { return input->getIUs(); }
     // Get the inputs
     std::vector<std::unique_ptr<Operator>> getInputs() override { return vutil::make(std::move(input)); }
     // Set the inputs

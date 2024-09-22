@@ -2,6 +2,7 @@
 #define H_saneql_Operator
 //---------------------------------------------------------------------------
 #include "adapter/VectorUtil.hpp"
+#include "adapter/IUSet.hpp"
 #include "algebra/Expression.hpp"
 #include "infra/Schema.hpp"
 #include <memory>
@@ -47,13 +48,13 @@ class Operator {
    virtual ~Operator();
 
    // Get the IUs
-   virtual std::vector<const IU*> getIUs() const { return {}; };
+   virtual IUSet getIUs() const { return {}; };
    // Get the inputs
    virtual std::vector<std::unique_ptr<Operator>> getInputs() { return {}; }
    // Set the inputs
    virtual void setInputs(std::vector<std::unique_ptr<Operator>> inputs) {}
    // Generate SQL
-   virtual void generate(CppWriter& out, const std::vector<const IU*>& required, std::function<void()> consume) = 0;
+   virtual void generate(CppWriter& out, const IUSet& required, std::function<void()> consume) = 0;
 };
 //---------------------------------------------------------------------------
 /// A table scan operator
@@ -80,11 +81,11 @@ class TableScan : public Operator {
    TableScan(std::string name, std::vector<Column> columns);
 
    // Get the IUs
-   std::vector<const IU*> getIUs() const override { return vutil::map<const IU*>(columns, [](const Column& c) { return c.iu.get(); }); }
+   IUSet getIUs() const override { return vutil::map<const IU*>(columns, [](const Column& c) { return c.iu.get(); }); }
    // Get the key IUs
-   std::vector<const IU*> getKeyIUs() const;
+   IUSet getKeyIUs() const;
    // Generate SQL
-   void generate(CppWriter& out, const std::vector<const IU*>& required, std::function<void()> consume) override;
+   void generate(CppWriter& out, const IUSet& required, std::function<void()> consume) override;
 
    friend class adapter::Optimizer;
 };
@@ -101,13 +102,13 @@ class Select : public Operator {
    Select(std::unique_ptr<Operator> input, std::unique_ptr<Expression> condition);
 
    // Get the IUs
-   std::vector<const IU*> getIUs() const override { return input->getIUs(); }
+   IUSet getIUs() const override { return input->getIUs(); }
    // Get the inputs
    std::vector<std::unique_ptr<Operator>> getInputs() override { return vutil::make(std::move(input)); }
    // Set the inputs
    void setInputs(std::vector<std::unique_ptr<Operator>> inputs) override { input = std::move(inputs[0]); }
    // Generate SQL
-   void generate(CppWriter& out, const std::vector<const IU*>& required, std::function<void()> consume) override;
+   void generate(CppWriter& out, const IUSet& required, std::function<void()> consume) override;
 
    friend class adapter::Optimizer;
 };
@@ -128,13 +129,13 @@ class Map : public Operator {
    Map(std::unique_ptr<Operator> input, std::vector<Entry> computations);
 
    // Get the IUs
-   std::vector<const IU*> getIUs() const override { return vutil::combine(input->getIUs(), vutil::map<const IU*>(computations, [](const Entry& e) { return e.iu.get(); })); }
+   IUSet getIUs() const override { return vutil::combine(input->getIUs(), vutil::map<const IU*>(computations, [](const Entry& e) { return e.iu.get(); })); }
    // Get the inputs
    std::vector<std::unique_ptr<Operator>> getInputs() override { return vutil::make(std::move(input)); }
    // Set the inputs
    void setInputs(std::vector<std::unique_ptr<Operator>> inputs) override { input = std::move(inputs[0]); }
    // Generate SQL
-   void generate(CppWriter& out, const std::vector<const IU*>& required, std::function<void()> consume) override;
+   void generate(CppWriter& out, const IUSet& required, std::function<void()> consume) override;
 };
 //---------------------------------------------------------------------------
 /// A set operation operator
@@ -165,7 +166,7 @@ class SetOperation : public Operator {
    SetOperation(std::unique_ptr<Operator> left, std::unique_ptr<Operator> right, std::vector<std::unique_ptr<Expression>> leftColumns, std::vector<std::unique_ptr<Expression>> rightColumns, std::vector<std::unique_ptr<IU>> resultColumns, Op op);
 
    // Generate SQL
-   void generate(CppWriter& out, const std::vector<const IU*>& required, std::function<void()> consume) override;
+   void generate(CppWriter& out, const IUSet& required, std::function<void()> consume) override;
 };
 //---------------------------------------------------------------------------
 /// A join operator
@@ -199,13 +200,13 @@ class Join : public Operator {
    JoinType getJoinType() const { return joinType; }
 
    // Get the IUs
-   std::vector<const IU*> getIUs() const override { return vutil::combine(left->getIUs(), right->getIUs()); }
+   IUSet getIUs() const override { return vutil::combine(left->getIUs(), right->getIUs()); }
    // Get the inputs
    std::vector<std::unique_ptr<Operator>> getInputs() override { return vutil::make(std::move(left), std::move(right)); }
    // Set the inputs
    void setInputs(std::vector<std::unique_ptr<Operator>> inputs) override { left = std::move(inputs[0]); right = std::move(inputs[1]); }
    // Generate SQL
-   void generate(CppWriter& out, const std::vector<const IU*>& required, std::function<void()> consume) override;
+   void generate(CppWriter& out, const IUSet& required, std::function<void()> consume) override;
 
    friend class adapter::Optimizer;
 };
@@ -225,13 +226,13 @@ class GroupBy : public Operator, public AggregationLike {
    GroupBy(std::unique_ptr<Operator> input, std::vector<Entry> groupBy, std::vector<Aggregation> aggregates);
 
    // Get the IUs
-   std::vector<const IU*> getIUs() const override { return vutil::combine(vutil::map<const IU*>(groupBy, [](auto& value) { return value.iu.get(); }), vutil::map<const IU*>(aggregates, [](auto& value) { return value.iu.get(); })); }
+   IUSet getIUs() const override { return vutil::combine(vutil::map<const IU*>(groupBy, [](auto& value) { return value.iu.get(); }), vutil::map<const IU*>(aggregates, [](auto& value) { return value.iu.get(); })); }
    // Get the inputs
    std::vector<std::unique_ptr<Operator>> getInputs() override { return vutil::make(std::move(input)); }
    // Set the inputs
    void setInputs(std::vector<std::unique_ptr<Operator>> inputs) override { input = std::move(inputs[0]); }
    // Generate SQL
-   void generate(CppWriter& out, const std::vector<const IU*>& required, std::function<void()> consume) override;
+   void generate(CppWriter& out, const IUSet& required, std::function<void()> consume) override;
 };
 //---------------------------------------------------------------------------
 /// A sort operator
@@ -258,13 +259,13 @@ class Sort : public Operator {
    Sort(std::unique_ptr<Operator> input, std::vector<Entry> order, std::optional<uint64_t> limit, std::optional<uint64_t> offset);
 
    // Get the IUs
-   std::vector<const IU*> getIUs() const override { return input->getIUs(); }
+   IUSet getIUs() const override { return input->getIUs(); }
    // Get the inputs
    std::vector<std::unique_ptr<Operator>> getInputs() override { return vutil::make(std::move(input)); }
    // Set the inputs
    void setInputs(std::vector<std::unique_ptr<Operator>> inputs) override { input = std::move(inputs[0]); }
    // Generate SQL
-   void generate(CppWriter& out, const std::vector<const IU*>& required, std::function<void()> consume) override;
+   void generate(CppWriter& out, const IUSet& required, std::function<void()> consume) override;
 };
 //---------------------------------------------------------------------------
 /// A window operator
@@ -287,7 +288,7 @@ class Window : public Operator, public AggregationLike {
    Window(std::unique_ptr<Operator> input, std::vector<Aggregation> aggregates, std::vector<std::unique_ptr<Expression>> partitionBy, std::vector<Sort::Entry> orderBy);
 
    // Generate SQL
-   void generate(CppWriter& out, const std::vector<const IU*>& required, std::function<void()> consume) override;
+   void generate(CppWriter& out, const IUSet& required, std::function<void()> consume) override;
 };
 //---------------------------------------------------------------------------
 /// An inline table definition
@@ -305,7 +306,7 @@ class InlineTable : public Operator {
    InlineTable(std::vector<std::unique_ptr<algebra::IU>> columns, std::vector<std::unique_ptr<algebra::Expression>> values, unsigned rowCount);
 
    // Generate SQL
-   void generate(CppWriter& out, const std::vector<const IU*>& required, std::function<void()> consume) override;
+   void generate(CppWriter& out, const IUSet& required, std::function<void()> consume) override;
 };
 //---------------------------------------------------------------------------
 /// A index scan operator
@@ -323,9 +324,9 @@ class IndexScan : public Operator {
    IndexScan(std::string name, std::vector<TableScan::Column> columns, std::vector<std::unique_ptr<Expression>> indexExpressions);
 
    // Get the IUs
-   std::vector<const IU*> getIUs() const override { return vutil::map<const IU*>(columns, [](const TableScan::Column& c) { return c.iu.get(); }); }
+   IUSet getIUs() const override { return vutil::map<const IU*>(columns, [](const TableScan::Column& c) { return c.iu.get(); }); }
    // Generate SQL
-   void generate(CppWriter& out, const std::vector<const IU*>& required, std::function<void()> consume) override;
+   void generate(CppWriter& out, const IUSet& required, std::function<void()> consume) override;
 };
 //---------------------------------------------------------------------------
 /// A index join operator
@@ -341,13 +342,13 @@ class IndexJoin : public Operator {
    IndexJoin(std::unique_ptr<Operator> input, std::unique_ptr<IndexScan> indexScan);
 
    // Get the IUs
-   std::vector<const IU*> getIUs() const override { return vutil::combine(input->getIUs(), indexScan->getIUs()); }
+   IUSet getIUs() const override { return vutil::combine(input->getIUs(), indexScan->getIUs()); }
    // Get the inputs
    std::vector<std::unique_ptr<Operator>> getInputs() override { return vutil::make(std::move(input)); }
    // Set the inputs
    void setInputs(std::vector<std::unique_ptr<Operator>> inputs) override { input = std::move(inputs[0]); }
    // Generate SQL
-   void generate(CppWriter& out, const std::vector<const IU*>& required, std::function<void()> consume) override;
+   void generate(CppWriter& out, const IUSet& required, std::function<void()> consume) override;
 };
 //---------------------------------------------------------------------------
 }

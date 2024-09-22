@@ -76,7 +76,7 @@ class CppWriter {
     /// Write IU
     void writeIU(const IU* iu);
     /// Write IUs
-    void writeIUs(const std::vector<const IU*>& ius);
+    void writeIUs(const IUSet& ius);
     /// Write expression
     void writeExpression(Expression* exp);
     /// Write expressions
