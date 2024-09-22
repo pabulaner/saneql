@@ -53,4 +53,30 @@ std::vector<T> combine(const std::vector<T>& arg, const TArgs&... args) {
 
 } // namespace vutil
 
+template <typename T>
+std::vector<T> operator|(const std::vector<T>& first, const std::vector<T>& second) {
+    std::vector<T> result = first;
+
+    for (const T& value : second) {
+        if (!vutil::contains(result, value)) {
+            result.push_back(value);
+        }
+    }
+
+    return result;
+}
+
+template <typename T>
+std::vector<T> operator&(const std::vector<T>& first, const std::vector<T>& second) {
+    std::vector<T> result;
+
+    for (const T& value : first) {
+        if (vutil::contains(second, value)) {
+            result.push_back(value);
+        }
+    }
+
+    return result;
+}
+
 } // namespace adapter

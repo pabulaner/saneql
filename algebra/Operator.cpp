@@ -34,19 +34,21 @@ std::vector<const IU*> TableScan::getKeyIUs() const
    return result;
 }
 //---------------------------------------------------------------------------
-void TableScan::generate(CppWriter& out, std::function<void()> consume)
+void TableScan::generate(CppWriter& out, const std::vector<const IU*>& required, std::function<void()> consume)
 // Generate SQL
 {
    out.writeln("db->" + name + ".forEach([&](auto& key, auto& value) {");
 
    for (auto& c : columns) {
-      out.write("const ");
-      out.writeType(c.iu->getType());
-      out.write("& ");
-      out.writeIU(c.iu.get());
-      out.write(" = ");
-      out.write(c.isKey ? "key" : "value");
-      out.writeln("." + c.name + ";");
+      if (vutil::contains(required, c.iu.get())) {
+         out.write("const ");
+         out.writeType(c.iu->getType());
+         out.write("& ");
+         out.writeIU(c.iu.get());
+         out.write(" = ");
+         out.write(c.isKey ? "key" : "value");
+         out.writeln("." + c.name + ";");
+      }
    }
    consume();
 
@@ -59,10 +61,10 @@ Select::Select(unique_ptr<Operator> input, unique_ptr<Expression> condition)
 {
 }
 //---------------------------------------------------------------------------
-void Select::generate(CppWriter& out, std::function<void()> consume)
+void Select::generate(CppWriter& out, const std::vector<const IU*>& required, std::function<void()> consume)
 // Generate SQL
 {
-   input->generate(out, [&]() {
+   input->generate(out, required | condition->getIUs(), [&]() {
       out.write("if (");
       out.writeExpression(condition.get());
       out.writeln(") {");
@@ -77,17 +79,19 @@ Map::Map(unique_ptr<Operator> input, vector<Entry> computations)
 {
 }
 //---------------------------------------------------------------------------
-void Map::generate(CppWriter& out, std::function<void()> consume)
+void Map::generate(CppWriter& out, const std::vector<const IU*>& required, std::function<void()> consume)
 // Generate SQL
 {
-   input->generate(out, [&]() {
+   input->generate(out, required | vutil::map<const IU*>(computations), [&]() {
       for (auto& c : computations) {
-         out.writeType(c.iu->getType());
-         out.write(" ");
-         out.writeIU(c.iu.get());
-         out.write(" = ");
-         out.writeExpression(c.value.get());
-         out.writeln(";");
+         if (vutil::contains(required, c.iu.get())) {
+            out.writeType(c.iu->getType());
+            out.write(" ");
+            out.writeIU(c.iu.get());
+            out.write(" = ");
+            out.writeExpression(c.value.get());
+            out.writeln(";");
+         }
       }
       consume();
    });
@@ -111,7 +115,7 @@ Join::Join(unique_ptr<Operator> left, unique_ptr<Operator> right, unique_ptr<Exp
 {
 }
 //---------------------------------------------------------------------------
-void Join::generate(CppWriter& out, std::function<void()> consume)
+void Join::generate(CppWriter& out, const std::vector<const IU*>& required, std::function<void()> consume)
 // Generate SQL
 {
    // validate
@@ -190,7 +194,7 @@ GroupBy::GroupBy(unique_ptr<Operator> input, vector<Entry> groupBy, vector<Aggre
 {
 }
 //---------------------------------------------------------------------------
-void GroupBy::generate(CppWriter& out, std::function<void()> consume)
+void GroupBy::generate(CppWriter& out, const std::vector<const IU*>& required, std::function<void()> consume)
 // Generate SQL
 {
    // validate
@@ -324,7 +328,7 @@ Sort::Sort(unique_ptr<Operator> input, vector<Entry> order, optional<uint64_t> l
 {
 }
 //---------------------------------------------------------------------------
-void Sort::generate(CppWriter& out, std::function<void()> consume)
+void Sort::generate(CppWriter& out, const std::vector<const IU*>& required, std::function<void()> consume)
 // Generate SQL
 {
    // validate
@@ -430,7 +434,7 @@ IndexScan::IndexScan(std::string name, std::vector<TableScan::Column> columns, s
 {
 }
 //---------------------------------------------------------------------------
-void IndexScan::generate(CppWriter& out, std::function<void()> consume)
+void IndexScan::generate(CppWriter& out, const std::vector<const IU*>& required, std::function<void()> consume)
 // Generate SQL
 {
    out.write("db->" + name + ".lookup1({");
@@ -473,7 +477,7 @@ IndexJoin::IndexJoin(unique_ptr<Operator> input, unique_ptr<IndexScan> indexScan
 {
 }
 //---------------------------------------------------------------------------
-void IndexJoin::generate(CppWriter& out, std::function<void()> consume)
+void IndexJoin::generate(CppWriter& out, const std::vector<const IU*>& required, std::function<void()> consume)
 // Generate SQL
 {
    input->generate(out, [&]() {
