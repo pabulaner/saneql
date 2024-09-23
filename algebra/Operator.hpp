@@ -326,6 +326,8 @@ class IndexScan : public Operator {
    IUSet getIUs() const override { return vutil::map<const IU*>(columns, [](const TableScan::Column& c) { return c.iu.get(); }); }
    // Generate SQL
    void generate(CppWriter& out, const IUSet& required, std::function<void()> consume) override;
+
+   friend class IndexJoin;
 };
 //---------------------------------------------------------------------------
 /// A index join operator

@@ -510,7 +510,13 @@ IndexJoin::IndexJoin(unique_ptr<Operator> input, unique_ptr<IndexScan> indexScan
 void IndexJoin::generate(CppWriter& out, const IUSet& required, std::function<void()> consume)
 // Generate SQL
 {
-   input->generate(out, required, [&]() {
+   IUSet otherRequired;
+
+   for (auto& exp : indexScan->indexExpressions) {
+      otherRequired = otherRequired | exp->getIUs();
+   }
+
+   input->generate(out, required | otherRequired, [&]() {
       indexScan->generate(out, required, consume);
    });
 }
