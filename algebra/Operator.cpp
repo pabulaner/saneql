@@ -82,7 +82,13 @@ Map::Map(unique_ptr<Operator> input, vector<Entry> computations)
 void Map::generate(CppWriter& out, const IUSet& required, std::function<void()> consume)
 // Generate SQL
 {
-   input->generate(out, required | IUSet(computations), [&]() {
+   IUSet otherRequired;
+
+   for (auto& c : computations) {
+      otherRequired = otherRequired | IUSet(c.value->getIUs());
+   }
+
+   input->generate(out, required | otherRequired, [&]() {
       for (auto& c : computations) {
          if (required.contains(c.iu.get())) {
             out.writeType(c.iu->getType());
