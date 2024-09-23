@@ -108,12 +108,12 @@ void CppCompiler::writeOutput(CppWriter& writer, const Output& output) const {
                 writer.writeln("limit -= 1;");
                 writer.write("std::cout << ");
                 bool first = true;
-                for (auto iu : tree->getIUs()) {
+                for (auto c : res.getBinding().getColumns()) {
                     if (first) 
                             first = false;
                     else
                         writer.write(" << \", \" << ");
-                    writer.writeIU(iu);
+                    writer.writeIU(c.iu);
                 }
                 writer.writeln(" << std::endl;");
                 writer.writeln("}");
