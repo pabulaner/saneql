@@ -1,0 +1,9 @@
+let base_min := '1993-10-01'::date,
+let base_max := '1994-01-01'::date,
+orders_tpch
+.filter(o_orderdate >= base_min && o_orderdate < base_max)
+.join(customer_tpch, c_custkey=o_custkey)
+.join(lineitem_tpch.filter(l_returnflag='R'), l_orderkey=o_orderkey)
+.join(nation_tpch, c_nationkey=n_nationkey)
+.groupby({c_custkey, c_name, c_acctbal, c_phone, n_name, c_address, c_comment}, {revenue:=sum(l_extendedprice * (1 - l_discount))})
+.orderby({revenue})
