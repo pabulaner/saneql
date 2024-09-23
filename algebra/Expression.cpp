@@ -239,7 +239,7 @@ Aggregate::Aggregate(unique_ptr<Operator> input, vector<Aggregation> aggregates,
 IUSet Aggregate::getIUs() const 
 // Generate SQL
 { 
-   return input->getIUs() | IUSet(aggregates); 
+   return IUSet(); 
 }
 //---------------------------------------------------------------------------
 void Aggregate::generate(CppWriter& out)
@@ -286,7 +286,13 @@ void Aggregate::generate(CppWriter& out)
       out.writeln(";");
    }
 
-   input->generate(out, IUSet(aggregates), [&]() {
+   IUSet required;
+
+   for (auto& a : aggregates) {
+      required = required | IUSet(a.value->getIUs());
+   }
+
+   input->generate(out, required, [&]() {
       for (size_t i = 0; i < aggregates.size(); i++) {
          Aggregation& a = aggregates[i];
          std::string name = out.getIUName(a.iu.get());

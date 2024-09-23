@@ -259,7 +259,7 @@ int main(int argc, char** argv) {
             std::cout << "Commands: help = print help" << std::endl;
             std::cout << "          exit = exit the program" << std::endl;
             std::cout << "          ls = list optimizations and files" << std::endl;
-            std::cout << "          run [--file opt:name] [--repeat number] [--limit number] = runs the provided files (queries) a number of times with only printing until the limit is reached" << std::endl;
+            std::cout << "          run [--file opt:name] [--repeat number] [--limit number] [--disableperf] = runs the provided files (queries)" << std::endl;
         } else if (params[0] == "exit") {
             run = false;
         } else if (params[0] == "ls") {
@@ -276,6 +276,7 @@ int main(int argc, char** argv) {
             std::vector<std::string_view> fileValues;
             size_t repeatValue = 1;
             size_t limitValue = 32;
+            bool disablePerfValue = false;
 
             for (size_t i = 1; i < params.size(); i++) {
                 bool param = fileParam || repeatParam || limitParam;
@@ -286,6 +287,8 @@ int main(int argc, char** argv) {
                     repeatParam = true;
                 } else if (params[i] == "--limit" && !param) {
                     limitParam = true;
+                } else if (params[i] == "--disableperf" && !param) {
+                    disablePerfValue = true;
                 } else if (fileParam) {
                     fileParam = false;
                     fileValues.push_back(params[i]);
@@ -351,7 +354,9 @@ int main(int argc, char** argv) {
 
                                     std::cout << queriesByOpt.first << ":" << queriesByName.first << ": " << (end - begin) << "ms" << std::endl;
 
-                                    e.printReport(std::cout, repeatValue);
+                                    if (!disablePerfValue) {
+                                        e.printReport(std::cout, repeatValue);
+                                    }
                                 }
                             }
                         }
