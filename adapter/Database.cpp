@@ -320,8 +320,6 @@ int main(int argc, char** argv) {
                 std::string_view opt = optAndName[0];
                 std::string_view name = optAndName[1];
 
-                std::cout << "o: " << opt << ", n: " << name << std::endl;
-
                 bool allOpts = opt == "*";
                 bool allNames = name == "*";
 
