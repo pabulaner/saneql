@@ -68,8 +68,6 @@ void Optimizer::optimizeSelects() {
 
 void Optimizer::optimizeScans() {
     std::vector<TableScan*> scans = outil::getAll<TableScan>(tree.get());
-    std::cout << "before:" << std::endl;
-    outil::printTree(tree.get());
 
     // iterate over all scans to check if they can be converted to index scans and if so, convert them
     for (TableScan* scan : scans) {
@@ -159,9 +157,6 @@ void Optimizer::optimizeScans() {
             }
         }
     }
-
-    std::cout << "after:" << std::endl;
-    outil::printTree(tree.get());
 }
 
 void Optimizer::optimizeJoins() {

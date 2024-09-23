@@ -54,7 +54,7 @@ $(PREFIX)astgen: $(PREFIX)makeutil/astgen.o
 
 # compile
 cquery:
-	./bin/saneql ./query/query.sane > ./adapter/resource/query.hpp
+#./bin/saneql ./query/query.sane > ./adapter/resource/query.hpp
 	$(CXX) $(CXXFLAGS) $(qsrc) -laio -o ./bin/query
 
 # run

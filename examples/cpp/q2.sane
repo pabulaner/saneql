@@ -1,7 +1,7 @@
 let base_min:='1995-09-01'::date,
 let base_max:='1995-10-01'::date,
-lineitem
+lineitem_tpch
+.join(part_tpch, l_partkey=p_partkey)
 .filter(l_shipdate >= base_min && l_shipdate < base_max)
-.join(part, l_partkey=p_partkey)
 .aggregate(100.00*sum(l_extendedprice * (1 - l_discount)) / sum(l_extendedprice * (1 - l_discount)))
 
