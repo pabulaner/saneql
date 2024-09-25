@@ -129,6 +129,8 @@ void Join::generate(CppWriter& out, const IUSet& required, std::function<void()>
       throw std::runtime_error("Unsupported join type");
    }
 
+   out.writeln("{");
+
    std::pair<IUSet, IUSet> keyIUs = outil::getJoinKeyIUs(left.get(), right.get(), condition.get());
    IUSet leftKeyIUs = std::move(keyIUs.first);
    IUSet rightKeyIUs = std::move(keyIUs.second);
@@ -155,7 +157,7 @@ void Join::generate(CppWriter& out, const IUSet& required, std::function<void()>
    out.writeTypes(leftPayloadIUs.getTypes());
    out.write(">> ");
    out.writeIU(&mapIU);
-   out.writeln(";");
+   out.writeln("(1024 * 1024);");
 
    left->generate(out, required | leftKeyIUs, [&]() {
       out.writeIU(&mapIU);
@@ -195,6 +197,8 @@ void Join::generate(CppWriter& out, const IUSet& required, std::function<void()>
       consume();
       out.writeln("}");
    });
+
+   out.writeln("}");
 }
 //---------------------------------------------------------------------------
 GroupBy::GroupBy(unique_ptr<Operator> input, vector<Entry> groupBy, vector<Aggregation> aggregates)
@@ -217,6 +221,8 @@ void GroupBy::generate(CppWriter& out, const IUSet& required, std::function<void
          default: throw std::runtime_error("Unsupported groupby aggregation");
       }
    }
+
+   out.writeln("{");
 
    const IU mapIU{Type::getUnknown()};
 
@@ -246,7 +252,7 @@ void GroupBy::generate(CppWriter& out, const IUSet& required, std::function<void
 
    out.write(">> ");
    out.writeIU(&mapIU);
-   out.writeln(";");
+   out.writeln("(1024 * 1024);");
 
    IUSet otherRequired;
 
@@ -347,6 +353,7 @@ void GroupBy::generate(CppWriter& out, const IUSet& required, std::function<void
    }
    consume();
    out.writeln("}");
+   out.writeln("}");
 }
 //---------------------------------------------------------------------------
 Sort::Sort(unique_ptr<Operator> input, vector<Entry> order, optional<uint64_t> limit, optional<uint64_t> offset)
@@ -368,6 +375,8 @@ void Sort::generate(CppWriter& out, const IUSet& required, std::function<void()>
       throw std::runtime_error("Unsupported orderby offset or limit");
    }
 
+   out.writeln("{");
+
    const IU vecIU{Type::getUnknown()};
 
    bool first = true;
@@ -383,6 +392,8 @@ void Sort::generate(CppWriter& out, const IUSet& required, std::function<void()>
    out.write(">> ");
    out.writeIU(&vecIU);
    out.writeln(";");
+   out.writeIU(&vecIU);
+   out.writeln(".reserve(1024 * 1024);");
 
    IUSet requiredOrderIUs;
 
@@ -433,6 +444,7 @@ void Sort::generate(CppWriter& out, const IUSet& required, std::function<void()>
    }
    consume();
 
+   out.writeln("}");
    out.writeln("}");
 }
 //---------------------------------------------------------------------------

@@ -7,3 +7,4 @@ orders_tpch
 .join(nation_tpch, c_nationkey=n_nationkey)
 .groupby({c_custkey, c_name, c_acctbal, c_phone, n_name, c_address, c_comment}, {revenue:=sum(l_extendedprice * (1 - l_discount))})
 .orderby({revenue})
+-- orderby limit 20

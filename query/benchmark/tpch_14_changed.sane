@@ -3,5 +3,5 @@ let base_max:='1995-10-01'::date,
 lineitem_tpch
 .join(part_tpch, l_partkey=p_partkey)
 .filter(l_shipdate >= base_min && l_shipdate < base_max)
-.groupby({}, {100.00*sum(l_extendedprice * (1 - l_discount)) / sum(l_extendedprice * (1 - l_discount))})
+.groupby({p_type}, {100.00*sum(l_extendedprice * (1 - l_discount)) / sum(l_extendedprice * (1 - l_discount))})
 

@@ -1,0 +1,2 @@
+supplier_tpch
+.join(customer_tpch.filter(c_custkey = 1), c_nationkey=s_nationkey)

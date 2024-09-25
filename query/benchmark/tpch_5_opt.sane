@@ -1,0 +1,11 @@
+region_tpch.filter(r_name='ASIA').join(
+    nation_tpch.join(
+        supplier_tpch.join(customer_tpch
+            .join(orders_tpch.filter(o_orderdate >= '1994-01-01'::date && o_orderdate < '1995-01-01'::date), c_custkey=o_custkey)
+            .join(lineitem_tpch, l_orderkey=o_orderkey), 
+        l_suppkey=s_suppkey),
+    s_nationkey=n_nationkey),
+n_regionkey=r_regionkey)
+.groupby({n_name}, {revenue:=sum(l_extendedprice * (1 - l_discount))})
+.orderby({revenue})
+.project({n_name, revenue})

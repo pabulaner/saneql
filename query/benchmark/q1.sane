@@ -1,5 +1,0 @@
-orders_tpch
-.join(lineitem_tpch, l_orderkey = o_orderkey)
-.filter(o_orderdate >= '1993-07-01'::date && o_orderdate < '1993-10-01'::date && l_commitdate < l_receiptdate)
-.groupby({o_orderpriority}, {order_count:=count()})
-.orderby(o_orderpriority)

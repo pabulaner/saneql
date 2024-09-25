@@ -1,2 +1,0 @@
-lineitem_tpch
-.filter(l_orderkey = 1 && l_partkey = 2 && l_suppkey = 3)
