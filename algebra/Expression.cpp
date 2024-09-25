@@ -289,7 +289,9 @@ void Aggregate::generate(CppWriter& out)
    IUSet required;
 
    for (auto& a : aggregates) {
-      required = required | IUSet(a.value->getIUs());
+      if (a.value.get()) {
+         required = required | IUSet(a.value->getIUs());
+      }
    }
 
    input->generate(out, required, [&]() {
