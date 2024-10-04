@@ -1,0 +1,5 @@
+let stock_level(w_id, d_id, o_id, threshold) := 
+    stock
+    .filter(s_w_id=d_id && s_quantity < threshold)
+    .join(orderline.filter(ol_w_id=w_id && ol_d_id=d_id && ol_o_id<o_id && ol_o_id>=o_id - 20), s_i_id=ol_i_id),
+stock_level(1, 2, 3, 20)
